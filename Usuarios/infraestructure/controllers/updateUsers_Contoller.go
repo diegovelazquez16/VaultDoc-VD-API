@@ -1,4 +1,4 @@
-// controllers/update_user_controller.go
+// Usuarios/controllers/update_user_controller.go
 package controllers
 
 import (
@@ -76,6 +76,14 @@ func (c *UpdateUserController) Execute(ctx *gin.Context) {
 			return
 		}
 
+		if strings.Contains(err.Error(), "validación") {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Error de validación",
+				"details": err.Error(),
+			})
+			return
+		}
+
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Error interno al actualizar usuario",
 			"details": err.Error(),
@@ -87,10 +95,12 @@ func (c *UpdateUserController) Execute(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Usuario actualizado correctamente",
 		"user": gin.H{
-			"id":        updatedUser.Id,
-			"email":     updatedUser.Email,
-			"nombre":    updatedUser.Nombre,
-			"apellidos": updatedUser.Apellidos,
+			"id":           updatedUser.Id,
+			"email":        updatedUser.Email,
+			"nombre":       updatedUser.Nombre,
+			"apellidos":    updatedUser.Apellidos,
+			"id_rol":       updatedUser.Id_Rol,
+			"departamento": updatedUser.Departamento,
 		},
 		"sync_status": "local_updated",
 	})
@@ -105,10 +115,34 @@ func (c *UpdateUserController) validateUpdateInput(user entities.User) error {
 		return fmt.Errorf("el nombre es requerido")
 	}
 
+	if strings.TrimSpace(user.Apellidos) == "" {
+		return fmt.Errorf("los apellidos son requeridos")
+	}
+
 	// Solo validar password si se está intentando cambiar
 	if user.Password != "" && len(user.Password) < 6 {
 		return fmt.Errorf("la contraseña debe tener al menos 6 caracteres")
 	}
 
+	// Validar departamento si se proporciona
+	if user.Departamento != "" && !c.isValidDepartamento(user.Departamento) {
+		return fmt.Errorf("el departamento debe ser: Finanzaz, Operativo o General")
+	}
+
+	// Validar id_rol si se proporciona
+	if user.Id_Rol != 0 && user.Id_Rol < 1 {
+		return fmt.Errorf("el id_rol debe ser un número positivo")
+	}
+
 	return nil
+}
+
+func (c *UpdateUserController) isValidDepartamento(departamento string) bool {
+	validDepartamentos := []string{"Finanzaz", "Operativo", "General"}
+	for _, validDept := range validDepartamentos {
+		if strings.EqualFold(departamento, validDept) {
+			return true
+		}
+	}
+	return false
 }
