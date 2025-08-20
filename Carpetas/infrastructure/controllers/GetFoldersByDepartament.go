@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"VaultDoc-VD/Carpetas/application"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,5 +20,12 @@ func(c *GetFoldersByDepartamentController)Execute(ctx *gin.Context){
 	if departament == "" {
 
 	}
-//	folders, err := c.uc.Execute(departament)
+	folders, err := c.uc.Execute(departament)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error al obtener carpetas: " + err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"folders": folders,
+	})
 }
