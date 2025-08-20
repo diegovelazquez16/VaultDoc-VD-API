@@ -1,4 +1,4 @@
-// controllers/create_user_controller.go
+// Usuarios/controllers/create_user_controller.go
 package controllers
 
 import (
@@ -70,12 +70,14 @@ func (c *CreateUserController) Execute(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, gin.H{
 		"message": "Usuario creado exitosamente",
 		"user": gin.H{
-			"id":        createdUser.Id,
-			"email":     createdUser.Email,
-			"nombre":    createdUser.Nombre,
-			"apellidos": createdUser.Apellidos,
+			"id":           createdUser.Id,
+			"email":        createdUser.Email,
+			"nombre":       createdUser.Nombre,
+			"apellidos":    createdUser.Apellidos,
+			"id_rol":       createdUser.Id_Rol,
+			"departamento": createdUser.Departamento,
 		},
-		"sync_status": "local_saved", // Indica que se guardó localmente
+		"sync_status": "local_saved",
 	})
 }
 
@@ -96,5 +98,29 @@ func (c *CreateUserController) validateUserInput(user entities.User) error {
 		return fmt.Errorf("el nombre es requerido")
 	}
 
+	if strings.TrimSpace(user.Apellidos) == "" {
+		return fmt.Errorf("los apellidos son requeridos")
+	}
+
+	// Validar departamento si se proporciona
+	if user.Departamento != "" && !c.isValidDepartamento(user.Departamento) {
+		return fmt.Errorf("el departamento debe ser: Finanzaz, Operativo o General")
+	}
+
+	// Validar id_rol si se proporciona
+	if user.Id_Rol != 0 && user.Id_Rol < 1 {
+		return fmt.Errorf("el id_rol debe ser un número positivo")
+	}
+
 	return nil
+}
+
+func (c *CreateUserController) isValidDepartamento(departamento string) bool {
+	validDepartamentos := []string{"Finanzaz", "Operativo", "General"}
+	for _, validDept := range validDepartamentos {
+		if strings.EqualFold(departamento, validDept) {
+			return true
+		}
+	}
+	return false
 }

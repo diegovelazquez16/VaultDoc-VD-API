@@ -1,3 +1,4 @@
+// Usuarios/infraestructure/adapters/bcrypt_adapter.service.go
 package adapters
 
 import "golang.org/x/crypto/bcrypt"

@@ -1,3 +1,4 @@
+// Usuarios/infraestructure/services/Middlewares_Auth.go
 package service
 
 import (
@@ -40,7 +41,7 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		c.Set("userID", claims["user_id"])
+		c.Set("userID", claims["userId"])
 		c.Next()
 	}
 }

@@ -4,6 +4,6 @@ type Folders struct{
 	Id 			int
 	Name 		string
 	Dir			string
-	Departament	string
+	Departamento	string
 	Id_uploader	string
 }
