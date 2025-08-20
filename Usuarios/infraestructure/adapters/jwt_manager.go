@@ -1,3 +1,4 @@
+// Usuarios/infraestructure/adapters/jwt_manager.go
 package adapters
 
 import (
