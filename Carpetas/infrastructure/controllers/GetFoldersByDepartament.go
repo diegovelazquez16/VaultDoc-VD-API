@@ -18,7 +18,8 @@ func NewGetFoldersByDepartamentController(uc *application.GetFoldersByDepartamen
 func(c *GetFoldersByDepartamentController)Execute(ctx *gin.Context){
 	departament := ctx.Param("departament")
 	if departament == "" {
-
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Error al obtener carpetas: Campo de departamento no incluido"})
+		return
 	}
 	folders, err := c.uc.Execute(departament)
 	if err != nil {

@@ -15,9 +15,11 @@ func SetupDependenciesFolders(r *gin.Engine, dbPool *core.Conn_PostgreSQL){
 
 	createFolderUseCase := application.NewCreateFolderUseCase(folderRepo)
 	getFoldersByDepartamentUseCase := application.NewGetFoldersByDepartamentUseCase(folderRepo)
+	getFolderByNameUseCase := application.NewGetFolderByName(folderRepo)
 
 	createFolderController := controllers.NewCreateFolderController(createFolderUseCase)
 	getFoldersByDepartamentController := controllers.NewGetFoldersByDepartamentController(getFoldersByDepartamentUseCase)
+	getFolderByNameController := controllers.NewGetFolderByName(getFolderByNameUseCase)
 
-	routes.SetUpFoldersRoutes(r, createFolderController, getFoldersByDepartamentController)
+	routes.SetUpFoldersRoutes(r, createFolderController, getFoldersByDepartamentController, getFolderByNameController)
 }
