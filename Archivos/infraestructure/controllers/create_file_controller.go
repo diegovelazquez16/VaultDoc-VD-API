@@ -142,6 +142,7 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		return
 	}
 
+	input.Nombre = application.GenerateFilename(input.Folio, input.Departamento)
 	// 7. Generar nombre final del archivo (puede incluir extensión si no la tiene)
 	finalFileName := input.Nombre
 	if filepath.Ext(finalFileName) == "" && fileExtension != "" {
