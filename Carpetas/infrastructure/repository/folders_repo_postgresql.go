@@ -28,7 +28,7 @@ func(r *FoldersPostgreSQLRepository) CreateFolder(newFolder entities.Folders) er
 }
 
 func(r *FoldersPostgreSQLRepository) GetFoldersByDepartament(department string) ([]entities.Folders, error) {
-	rows := r.db.FetchRows("SELECT * FROM folders WHERE departamento = %w", department)
+	rows := r.db.FetchRows("SELECT * FROM folders WHERE departamento = $1", department)
 	if rows == nil {
 		return nil, fmt.Errorf("Error al ejecutar consulta")
 	}
@@ -59,7 +59,7 @@ func(r *FoldersPostgreSQLRepository) GetFoldersByDepartament(department string) 
 }
 
 func(r *FoldersPostgreSQLRepository) GetFolderByFullName(name string) ([]entities.Folders, error) {
-	rows := r.db.FetchRows("SELECT * FROM folders WHERE ILIKE %w", name)
+	rows := r.db.FetchRows("SELECT * FROM folders WHERE name ILIKE $1", name)
 	if rows == nil {
 		return nil, fmt.Errorf("Error al ejecutar consulta")
 	}
@@ -90,7 +90,8 @@ func(r *FoldersPostgreSQLRepository) GetFolderByFullName(name string) ([]entitie
 }
 
 func(r *FoldersPostgreSQLRepository) GetFolderByName(name string) ([]entities.Folders, error) {
-	rows := r.db.FetchRows("SELECT * FROM folders WHERE ILIKE '%$1%'", name)
+	fmt.Println("SELECT * FROM folders WHERE name ILIKE '%" + name + "%'")
+	rows := r.db.FetchRows("SELECT * FROM folders WHERE name ILIKE '%" + name + "%'")
 	if rows == nil {
 		return nil, fmt.Errorf("Error al ejecutar consulta")
 	}
