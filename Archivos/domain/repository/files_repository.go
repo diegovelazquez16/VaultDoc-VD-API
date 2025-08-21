@@ -1,13 +1,14 @@
+// Archivos/domain/repository/files_repository.go
 package repository
 
 import (
-	entity "VaultDoc-VD/Archivos/domain/entities"
+	entities "VaultDoc-VD/Archivos/domain/entities"
 )
 
 type FilesRepository interface {
-	Create(file entity.Files) error
-	GetByID(id int) (entity.Files, error)
-	Update(file entity.Files) error
+	Create(file entities.Files) error
+	GetByID(id int) (entities.Files, error)
+	Update(file entities.Files) error
 	Delete(id int) error
-	GetAll() ([]entity.Files, error)
+	GetAll() ([]entities.Files, error)
 }

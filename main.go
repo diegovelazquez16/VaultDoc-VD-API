@@ -3,7 +3,9 @@ package main
 import (
 	"log"
 
-	"VaultDoc-VD/Usuarios/infraestructure"
+	usuariosInfra "VaultDoc-VD/Usuarios/infraestructure"
+	archivosInfra "VaultDoc-VD/Archivos/infraestructure"
+
 	"VaultDoc-VD/core"
 
 	"github.com/gin-gonic/gin"
@@ -20,7 +22,8 @@ func main() {
 
 	r.Use(core.SetupCORS())
 
-	infraestructure.SetupDependencies(r, dbPool)
+	usuariosInfra.SetupDependencies(r, dbPool)
+	archivosInfra.SetupDependencies(r, dbPool)
 
 	log.Println("Servidor iniciado en puerto 8080")
 	if err := r.Run(":8080"); err != nil {
