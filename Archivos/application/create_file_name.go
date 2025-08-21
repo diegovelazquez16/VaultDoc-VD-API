@@ -1,7 +1,7 @@
 package application
 
 import (
-	"strconv"
+	"fmt"
 	"time"
 )
 
@@ -35,5 +35,8 @@ func GenerateFilename(folio, departament string) string {
 	case "Departamento de Seguridad e Higiene":
 		abreviation = "DSH"
 	}
-	return "SOTCH-" + abreviation + "-" + folio + "-" + strconv.FormatInt(int64(time.Now().Year()), 36)
+	now := time.Now()
+    year := now.Year()
+    yearString := fmt.Sprintf("%d", year)
+	return "SOTCH-" + abreviation + "-" + folio + "-" + yearString
 }
