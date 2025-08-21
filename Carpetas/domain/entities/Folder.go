@@ -1,9 +1,8 @@
 package entities
 
 type Folders struct{
-	Id 			int
-	Name 		string
-	Dir			string
+	Id 				int
+	Name 			string
 	Departamento	string
-	Id_uploader	string
+	Id_uploader		int
 }

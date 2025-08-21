@@ -5,6 +5,7 @@ import (
 
 	usuariosInfra "VaultDoc-VD/Usuarios/infraestructure"
 	archivosInfra "VaultDoc-VD/Archivos/infraestructure"
+	"VaultDoc-VD/Carpetas/infrastructure"
 
 	"VaultDoc-VD/core"
 
@@ -24,6 +25,7 @@ func main() {
 
 	usuariosInfra.SetupDependencies(r, dbPool)
 	archivosInfra.SetupDependencies(r, dbPool)
+	infrastructure.SetupDependenciesFolders(r, dbPool)
 
 	log.Println("Servidor iniciado en puerto 8080")
 	if err := r.Run(":8080"); err != nil {
