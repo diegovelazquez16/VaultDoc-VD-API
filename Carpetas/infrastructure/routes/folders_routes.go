@@ -9,7 +9,7 @@ import (
 func SetUpFoldersRoutes(
 	r *gin.Engine, createFolderController *controllers.CreateFolderController,
 	getFoldersByDepartamentController *controllers.GetFoldersByDepartamentController,
-	getFolderByNameController *controllers.GetFolderByNameController
+	getFolderByNameController *controllers.GetFolderByNameController,
 	){
 	g := r.Group("folders")
 	{
