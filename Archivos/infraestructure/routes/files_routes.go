@@ -18,6 +18,7 @@ func SetupFilesRoutes(
 	removeChangePermissionController *controllers.RemoveChangePermissionController,
 	grantViewPermissionController *controllers.GrantViewPermissionController,
 	removeViewPermissionController *controllers.RemoveViewPermissionController,
+	checkPermissionsController *controllers.CheckPermissionsController,
 ) {
 	filesGroup := r.Group("files")
 	{
@@ -38,5 +39,8 @@ func SetupFilesRoutes(
 		// Permisos de visualización
 		filesGroup.POST("/permissions/view", grantViewPermissionController.Execute)
 		filesGroup.DELETE("/permissions/view", removeViewPermissionController.Execute)
+		
+		// Verificar permisos
+		filesGroup.GET("/permissions/:fileId/:userId", checkPermissionsController.Execute)
 	}
 }

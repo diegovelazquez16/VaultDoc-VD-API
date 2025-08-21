@@ -52,7 +52,7 @@ func (uc *CreateUserUseCase) Execute(user entities.User) (*entities.User, error)
 
 	// Si departamento está vacío, usar valor por defecto
 	if user.Departamento == "" {
-		user.Departamento = "Operativo" // Valor por defecto del enum
+		user.Departamento = "Gerencia Operativa" // Valor por defecto del enum
 	}
 
 	if err := uc.repo.Save(user); err != nil {
@@ -100,7 +100,7 @@ func (uc *CreateUserUseCase) validateUser(user entities.User) error {
 	// Validar departamento si se proporciona
 	if user.Departamento != "" {
 		if !uc.isValidDepartamento(user.Departamento) {
-			return fmt.Errorf("el departamento debe ser: Finanzaz, Operativo o General")
+			return fmt.Errorf("el departamento debe ser: Finanzaz, Gerencia Operativa o General")
 		}
 	}
 
@@ -118,7 +118,7 @@ func (uc *CreateUserUseCase) isValidEmail(email string) bool {
 }
 
 func (uc *CreateUserUseCase) isValidDepartamento(departamento string) bool {
-	validDepartamentos := []string{"Finanzaz", "Operativo", "General"}
+	validDepartamentos := []string{"Finanzaz", "Gerencia Operativa", "General"}
 	for _, validDept := range validDepartamentos {
 		if strings.EqualFold(departamento, validDept) {
 			return true
