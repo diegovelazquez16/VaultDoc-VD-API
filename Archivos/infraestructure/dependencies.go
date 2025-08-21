@@ -23,7 +23,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	getAllFilesUseCase := application.NewGetAllFilesUseCase(filesRepo)
 	updateFileUseCase := application.NewUpdateFileUseCase(filesRepo)
 	deleteFileUseCase := application.NewDeleteFileUseCase(filesRepo)
-	downloadFileUseCase := application.NewDownloadFileUseCase() // Sin parámetro de repo
+	downloadFileUseCase := application.NewDownloadFileUseCase()
 
 	// Inicializar use cases - Change Permissions
 	grantChangePermissionUseCase := application.NewGrantChangePermissionUseCase(changeFileRepo)
@@ -39,7 +39,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	getAllFilesController := controllers.NewGetAllFilesController(getAllFilesUseCase)
 	updateFileController := controllers.NewUpdateFileController(updateFileUseCase)
 	deleteFileController := controllers.NewDeleteFileController(deleteFileUseCase)
-	downloadFileController := controllers.NewDownloadFileController(downloadFileUseCase) // Nuevo controlador
+	downloadFileController := controllers.NewDownloadFileController(downloadFileUseCase)
 
 	// Inicializar controllers - Change Permissions
 	grantChangePermissionController := controllers.NewGrantChangePermissionController(grantChangePermissionUseCase)
@@ -57,7 +57,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 		getAllFilesController,
 		updateFileController,
 		deleteFileController,
-		downloadFileController, // Agregar nuevo controlador
+		downloadFileController,
 		grantChangePermissionController,
 		removeChangePermissionController,
 		grantViewPermissionController,
