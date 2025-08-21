@@ -33,6 +33,9 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	grantViewPermissionUseCase := application.NewGrantViewPermissionUseCase(viewFileRepo)
 	removeViewPermissionUseCase := application.NewRemoveViewPermissionUseCase(viewFileRepo)
 
+	// Inicializar use case - Check Permissions (NUEVO)
+	checkPermissionsUseCase := application.NewCheckPermissionsUseCase(changeFileRepo, viewFileRepo, filesRepo)
+
 	// Inicializar controllers - Files CRUD
 	createFileController := controllers.NewCreateFileController(createFileUseCase)
 	getFileByIdController := controllers.NewGetFileByIdController(getFileByIdUseCase)
@@ -49,6 +52,9 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	grantViewPermissionController := controllers.NewGrantViewPermissionController(grantViewPermissionUseCase)
 	removeViewPermissionController := controllers.NewRemoveViewPermissionController(removeViewPermissionUseCase)
 
+	// Inicializar controller - Check Permissions (NUEVO)
+	checkPermissionsController := controllers.NewCheckPermissionsController(checkPermissionsUseCase)
+
 	// Configurar rutas
 	routes.SetupFilesRoutes(
 		r,
@@ -62,5 +68,6 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 		removeChangePermissionController,
 		grantViewPermissionController,
 		removeViewPermissionController,
+		checkPermissionsController,
 	)
-} 
+}
