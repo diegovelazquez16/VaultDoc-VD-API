@@ -4,6 +4,7 @@ package controllers
 import (
 	"VaultDoc-VD/Usuarios/application"
 	"VaultDoc-VD/Usuarios/domain/entities"
+	"VaultDoc-VD/validators"
 	"fmt"
 	"net/http"
 	"strings"
@@ -103,8 +104,8 @@ func (c *CreateUserController) validateUserInput(user entities.User) error {
 	}
 
 	// Validar departamento si se proporciona
-	if user.Departamento != "" && !c.isValidDepartamento(user.Departamento) {
-		return fmt.Errorf("el departamento debe ser: Finanzaz, Gerencia Operativa o General")
+	if user.Departamento != "" && !validators.IsValidDepartamento(user.Departamento) {
+		return fmt.Errorf("el departamento debe ser uno de los ya existentes")
 	}
 
 	// Validar id_rol si se proporciona
@@ -113,14 +114,4 @@ func (c *CreateUserController) validateUserInput(user entities.User) error {
 	}
 
 	return nil
-}
-
-func (c *CreateUserController) isValidDepartamento(departamento string) bool {
-	validDepartamentos := []string{"Finanzaz", "Gerencia Operativa", "General"}
-	for _, validDept := range validDepartamentos {
-		if strings.EqualFold(departamento, validDept) {
-			return true
-		}
-	}
-	return false
 }
