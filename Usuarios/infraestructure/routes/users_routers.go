@@ -13,6 +13,7 @@ func SetupUserRoutes(r *gin.Engine, createUserController *controllers.CreateUser
 	getUsersController *controllers.GetAllUsersController,
 	getUsersControllerById *controllers.GetUserByIdController,
 	updateUserController *controllers.UpdateUserController,
+	updateProfileController *controllers.UpdateProfileController,
 	deleteUserController *controllers.DeleteUserController,
 	loginUserController *controllers.LoginUserController,
 ) {
@@ -23,13 +24,14 @@ func SetupUserRoutes(r *gin.Engine, createUserController *controllers.CreateUser
 	r.DELETE("/users/:id", service.AdminMiddleware(jwtSecret), deleteUserController.Execute)
 	r.GET("/users", service.AdminMiddleware(jwtSecret), getUsersController.Execute)
 	r.GET("/users/:id", service.AdminMiddleware(jwtSecret), getUsersControllerById.Execute)
+	r.PUT("/users/:id", service.AdminMiddleware(jwtSecret), updateUserController.Execute)
+
     // solo el jefe de departamento
-	
 
 	// cualquier usuario autenticado
-	r.PUT("/users/:id", service.AuthMiddleware(jwtSecret), updateUserController.Execute)
+	r.PUT("/users/profile", service.AuthMiddleware(jwtSecret), updateProfileController.Execute)
 
 	// sin autenticación
 	r.POST("/users/login", loginUserController.Execute)
- 
+
 }
