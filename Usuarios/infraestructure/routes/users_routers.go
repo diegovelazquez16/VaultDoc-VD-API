@@ -3,8 +3,8 @@ package routes
 
 import (
 	"VaultDoc-VD/Usuarios/infraestructure/controllers"
-	_ "VaultDoc-VD/Usuarios/infraestructure/services"
-	_ "os"
+	"VaultDoc-VD/Middlewares"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,13 +16,20 @@ func SetupUserRoutes(r *gin.Engine, createUserController *controllers.CreateUser
 	deleteUserController *controllers.DeleteUserController,
 	loginUserController *controllers.LoginUserController,
 ) {
-	//jwtSecret := os.Getenv("JWT_SECRET")
+	jwtSecret := os.Getenv("JWT_SECRET")
 
-	r.POST("/users", createUserController.Execute)
-	r.GET("/users", getUsersController.Execute)
-	r.GET("/users/:id", getUsersControllerById.Execute)
-	r.PUT("/users/:id", updateUserController.Execute)
-	r.DELETE("/users/:id", deleteUserController.Execute)
+	// solo el admin
+	r.POST("/users", service.AdminMiddleware(jwtSecret), createUserController.Execute)
+	r.DELETE("/users/:id", service.AdminMiddleware(jwtSecret), deleteUserController.Execute)
+	r.GET("/users", service.AdminMiddleware(jwtSecret), getUsersController.Execute)
+	r.GET("/users/:id", service.AdminMiddleware(jwtSecret), getUsersControllerById.Execute)
+    // solo el jefe de departamento
+	
+
+	// cualquier usuario autenticado
+	r.PUT("/users/:id", service.AuthMiddleware(jwtSecret), updateUserController.Execute)
+
+	// sin autenticación
 	r.POST("/users/login", loginUserController.Execute)
-
+ 
 }

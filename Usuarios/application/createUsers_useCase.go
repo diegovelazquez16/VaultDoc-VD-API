@@ -87,7 +87,6 @@ func (uc *CreateUserUseCase) validateUser(user entities.User) error {
 		return fmt.Errorf("los apellidos son requeridos")
 	}
 
-	// Validar id_rol si se proporciona
 	if user.Id_Rol != 0 && user.Id_Rol < 1 {
 		return fmt.Errorf("el id_rol debe ser un número positivo")
 	}
