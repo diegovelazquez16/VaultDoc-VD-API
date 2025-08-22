@@ -3,6 +3,9 @@ package routes
 
 import (
 	"VaultDoc-VD/Archivos/infraestructure/controllers"
+	"VaultDoc-VD/Middlewares"
+	"os"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,27 +23,33 @@ func SetupFilesRoutes(
 	removeViewPermissionController *controllers.RemoveViewPermissionController,
 	checkPermissionsController *controllers.CheckPermissionsController,
 ) {
+
+    jwtSecret := os.Getenv("JWT_SECRET")
+
 	filesGroup := r.Group("files")
 	{
+
+
 		// CRUD de archivos
-		filesGroup.POST("/", createFileController.Execute)
-		filesGroup.GET("/:id", getFileByIdController.Execute)
-		filesGroup.GET("/", getAllFilesController.Execute)
-		filesGroup.PUT("/:id", updateFileController.Execute)
-		filesGroup.DELETE("/:id", deleteFileController.Execute)
-		
+		filesGroup.POST("/", service.AuthMiddleware(jwtSecret), createFileController.Execute)
+		filesGroup.GET("/:id", service.AuthMiddleware(jwtSecret), getFileByIdController.Execute)
+		filesGroup.GET("/", service.AuthMiddleware(jwtSecret), getAllFilesController.Execute)
+		filesGroup.PUT("/:id", service.AuthMiddleware(jwtSecret), updateFileController.Execute)
+		filesGroup.DELETE("/:id", service.AuthMiddleware(jwtSecret), deleteFileController.Execute)
+
 		// Descarga de archivos por ruta
-		filesGroup.GET("/download/*dir", downloadFileController.Execute)
-		
+		filesGroup.GET("/download/*dir", service.AuthMiddleware(jwtSecret), downloadFileController.Execute)
+        
+		// solo el jefe de departamento:
 		// Permisos de edición
-		filesGroup.POST("/permissions/change", grantChangePermissionController.Execute)
-		filesGroup.DELETE("/permissions/change", removeChangePermissionController.Execute)
-		
+		filesGroup.POST("/permissions/change", service.BossMiddleware(jwtSecret), grantChangePermissionController.Execute)
+		filesGroup.DELETE("/permissions/change", service.BossMiddleware(jwtSecret), removeChangePermissionController.Execute)
+
 		// Permisos de visualización
-		filesGroup.POST("/permissions/view", grantViewPermissionController.Execute)
-		filesGroup.DELETE("/permissions/view", removeViewPermissionController.Execute)
+		filesGroup.POST("/permissions/view", service.BossMiddleware(jwtSecret), grantViewPermissionController.Execute)
+		filesGroup.DELETE("/permissions/view", service.BossMiddleware(jwtSecret), removeViewPermissionController.Execute)
 		
 		// Verificar permisos
-		filesGroup.GET("/permissions/:fileId/:userId", checkPermissionsController.Execute)
+		filesGroup.GET("/permissions/:fileId/:userId", service.BossMiddleware(jwtSecret), checkPermissionsController.Execute)
 	}
 }

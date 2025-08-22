@@ -76,7 +76,7 @@ func (c *CreateFolderController) validateFolderInput(folder entities.Folders) er
 
 	// Validar departamento si se proporciona
 	if folder.Departamento != "" && !validators.IsValidDepartamento(folder.Departamento) {
-		return fmt.Errorf("el departamento debe ser: Finanzaz, Operativo o General")
+		return fmt.Errorf("el departamento debe ser uno de los ya existentes")
 	}
 
 	// Validar id del usuario quien lo subió
