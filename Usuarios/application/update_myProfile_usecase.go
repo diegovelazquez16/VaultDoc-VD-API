@@ -1,4 +1,4 @@
-// Usuarios/application/update_user_usecase.go
+// Usuarios/application/update_myProfile_usecase.go
 package application
 
 import (
@@ -10,30 +10,36 @@ import (
 	"VaultDoc-VD/Usuarios/domain/services"
 )
 
-type UpdateUserUseCase struct {
+type UpdateProfileUseCase struct {
 	repo   repository.UserRepository
 	bcrypt services.IBcryptService
 }
 
-func NewUpdateUserUseCase(repo repository.UserRepository, bcrypt services.IBcryptService) *UpdateUserUseCase {
-	return &UpdateUserUseCase{
+func NewUpdateProfileUseCase(repo repository.UserRepository, bcrypt services.IBcryptService) *UpdateProfileUseCase {
+	return &UpdateProfileUseCase{
 		repo:   repo,
 		bcrypt: bcrypt,
 	}
 }
 
-func (uc *UpdateUserUseCase) Execute(userUpdate entities.User) (*entities.User, error) {
+func (uc *UpdateProfileUseCase) Execute(userUpdate entities.User, authenticatedUserID int) (*entities.User, error) {
+	// Verificar que el usuario solo pueda actualizar su propio perfil
+	if userUpdate.Id != authenticatedUserID {
+		return nil, fmt.Errorf("no tienes permisos para actualizar el perfil de otro usuario")
+	}
 
+	// Verificar que el usuario existe
 	existingUser, err := uc.repo.FindById(userUpdate.Id)
 	if err != nil {
 		return nil, fmt.Errorf("usuario con ID %d no encontrado: %w", userUpdate.Id, err)
 	}
 
-	if err := uc.validateUpdateData(userUpdate); err != nil {
+	// Validar datos de entrada
+	if err := uc.validateProfileData(userUpdate); err != nil {
 		return nil, fmt.Errorf("validación fallida: %w", err)
 	}
 
-	// Verificar que el email no esté siendo usado por otro usuario
+	// Verificar que el email no esté siendo usado por otro usuario (si se está cambiando)
 	if userUpdate.Email != existingUser.Email {
 		userWithEmail, _ := uc.repo.FindByEmail(userUpdate.Email)
 		if userWithEmail != nil && userWithEmail.Id != userUpdate.Id {
@@ -41,17 +47,13 @@ func (uc *UpdateUserUseCase) Execute(userUpdate entities.User) (*entities.User, 
 		}
 	}
 
-	updatedUser := *existingUser
-	updatedUser.Nombre = strings.TrimSpace(userUpdate.Nombre)
-	updatedUser.Apellidos = strings.TrimSpace(userUpdate.Apellidos)
-	updatedUser.Email = strings.ToLower(strings.TrimSpace(userUpdate.Email))
-
-	if userUpdate.Departamento != "" {
-		updatedUser.Departamento = strings.TrimSpace(userUpdate.Departamento)
-	}
-
-	if userUpdate.Id_Rol > 0 {
-		updatedUser.Id_Rol = userUpdate.Id_Rol
+	// Preparar datos para actualización (solo campos permitidos)
+	updatedUser := entities.User{
+		Id:        userUpdate.Id,
+		Nombre:    strings.TrimSpace(userUpdate.Nombre),
+		Apellidos: strings.TrimSpace(userUpdate.Apellidos),
+		Email:     strings.ToLower(strings.TrimSpace(userUpdate.Email)),
+		Password:  existingUser.Password, // Mantener la contraseña actual por defecto
 	}
 
 	// Actualizar contraseña solo si se proporciona una nueva
@@ -63,15 +65,23 @@ func (uc *UpdateUserUseCase) Execute(userUpdate entities.User) (*entities.User, 
 		updatedUser.Password = hashedPassword
 	}
 
-	if err := uc.repo.Update(updatedUser); err != nil {
-		return nil, fmt.Errorf("error al actualizar usuario: %w", err)
+	// Actualizar usando el método UpdateProfile que solo actualiza campos básicos
+	if err := uc.repo.UpdateProfile(updatedUser); err != nil {
+		return nil, fmt.Errorf("error al actualizar perfil: %w", err)
 	}
 
 	// Obtener el usuario actualizado
 	finalUser, err := uc.repo.FindById(updatedUser.Id)
 	if err != nil {
-		// Si no se puede recuperar, usar el usuario actualizado
-		finalUser = &updatedUser
+		// Si no se puede recuperar, usar el usuario actualizado pero con los datos que no cambian
+		finalUser = &entities.User{
+			Id:           updatedUser.Id,
+			Nombre:       updatedUser.Nombre,
+			Apellidos:    updatedUser.Apellidos,
+			Email:        updatedUser.Email,
+			Id_Rol:       existingUser.Id_Rol,       // Mantener rol original
+			Departamento: existingUser.Departamento, // Mantener departamento original
+		}
 	}
 
 	// Limpiar password antes de retornar
@@ -79,7 +89,7 @@ func (uc *UpdateUserUseCase) Execute(userUpdate entities.User) (*entities.User, 
 	return finalUser, nil
 }
 
-func (uc *UpdateUserUseCase) validateUpdateData(user entities.User) error {
+func (uc *UpdateProfileUseCase) validateProfileData(user entities.User) error {
 	if user.Id <= 0 {
 		return fmt.Errorf("ID de usuario inválido")
 	}
@@ -100,18 +110,15 @@ func (uc *UpdateUserUseCase) validateUpdateData(user entities.User) error {
 		return fmt.Errorf("los apellidos son requeridos")
 	}
 
+	// Validar contraseña solo si se proporciona
 	if user.Password != "" && len(user.Password) < 6 {
 		return fmt.Errorf("la nueva contraseña debe tener al menos 6 caracteres")
-	}
-
-	if user.Id_Rol != 0 && user.Id_Rol < 1 {
-		return fmt.Errorf("el id_rol debe ser un número positivo")
 	}
 
 	return nil
 }
 
-func (uc *UpdateUserUseCase) isValidEmail(email string) bool {
+func (uc *UpdateProfileUseCase) isValidEmail(email string) bool {
 	email = strings.TrimSpace(email)
 	return strings.Contains(email, "@") && strings.Contains(email, ".")
 }
