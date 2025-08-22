@@ -104,7 +104,7 @@ func (c *CreateUserController) validateUserInput(user entities.User) error {
 
 	// Validar departamento si se proporciona
 	if user.Departamento != "" && !c.isValidDepartamento(user.Departamento) {
-		return fmt.Errorf("el departamento debe ser: Finanzaz, Operativo o General")
+		return fmt.Errorf("el departamento debe ser: Finanzaz, Gerencia Operativa o General")
 	}
 
 	// Validar id_rol si se proporciona
@@ -116,7 +116,7 @@ func (c *CreateUserController) validateUserInput(user entities.User) error {
 }
 
 func (c *CreateUserController) isValidDepartamento(departamento string) bool {
-	validDepartamentos := []string{"Finanzaz", "Operativo", "General"}
+	validDepartamentos := []string{"Finanzaz", "Gerencia Operativa", "General"}
 	for _, validDept := range validDepartamentos {
 		if strings.EqualFold(departamento, validDept) {
 			return true

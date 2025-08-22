@@ -13,23 +13,24 @@ func SetupFilesRoutes(
 	getAllFilesController *controllers.GetAllFilesController,
 	updateFileController *controllers.UpdateFileController,
 	deleteFileController *controllers.DeleteFileController,
-	downloadFileController *controllers.DownloadFileController, // Nuevo controlador
+	downloadFileController *controllers.DownloadFileController,
 	grantChangePermissionController *controllers.GrantChangePermissionController,
 	removeChangePermissionController *controllers.RemoveChangePermissionController,
 	grantViewPermissionController *controllers.GrantViewPermissionController,
 	removeViewPermissionController *controllers.RemoveViewPermissionController,
+	checkPermissionsController *controllers.CheckPermissionsController,
 ) {
 	filesGroup := r.Group("files")
 	{
 		// CRUD de archivos
-		filesGroup.POST("/", createFileController.Execute)                    // Crear/Subir archivo
-		filesGroup.GET("/:id", getFileByIdController.Execute)                 // Obtener info del archivo
-		filesGroup.GET("/", getAllFilesController.Execute)                    // Listar todos los archivos
-		filesGroup.PUT("/:id", updateFileController.Execute)                  // Actualizar info del archivo
-		filesGroup.DELETE("/:id", deleteFileController.Execute)               // Eliminar archivo
+		filesGroup.POST("/", createFileController.Execute)
+		filesGroup.GET("/:id", getFileByIdController.Execute)
+		filesGroup.GET("/", getAllFilesController.Execute)
+		filesGroup.PUT("/:id", updateFileController.Execute)
+		filesGroup.DELETE("/:id", deleteFileController.Execute)
 		
 		// Descarga de archivos por ruta
-		filesGroup.GET("/download/*dir", downloadFileController.Execute)      // Descargar archivo por ruta
+		filesGroup.GET("/download/*dir", downloadFileController.Execute)
 		
 		// Permisos de edición
 		filesGroup.POST("/permissions/change", grantChangePermissionController.Execute)
@@ -38,5 +39,8 @@ func SetupFilesRoutes(
 		// Permisos de visualización
 		filesGroup.POST("/permissions/view", grantViewPermissionController.Execute)
 		filesGroup.DELETE("/permissions/view", removeViewPermissionController.Execute)
+		
+		// Verificar permisos
+		filesGroup.GET("/permissions/:fileId/:userId", checkPermissionsController.Execute)
 	}
 }
