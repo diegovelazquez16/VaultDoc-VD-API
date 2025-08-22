@@ -45,16 +45,6 @@ func (uc *CreateUserUseCase) Execute(user entities.User) (*entities.User, error)
 	user.Apellidos = strings.TrimSpace(user.Apellidos)
 	user.Departamento = strings.TrimSpace(user.Departamento)
 
-	// Validar que id_rol sea válido si no se proporciona, usar valor por defecto
-	if user.Id_Rol <= 0 {
-		user.Id_Rol = 2 // Valor por defecto
-	}
-
-	// Si departamento está vacío, usar valor por defecto
-	if user.Departamento == "" {
-		user.Departamento = "Gerencia Operativa" // Valor por defecto del enum
-	}
-
 	if err := uc.repo.Save(user); err != nil {
 		return nil, fmt.Errorf("error al guardar usuario: %w", err)
 	}
@@ -97,13 +87,6 @@ func (uc *CreateUserUseCase) validateUser(user entities.User) error {
 		return fmt.Errorf("los apellidos son requeridos")
 	}
 
-	// Validar departamento si se proporciona
-	if user.Departamento != "" {
-		if !uc.isValidDepartamento(user.Departamento) {
-			return fmt.Errorf("el departamento debe ser: Finanzaz, Gerencia Operativa o General")
-		}
-	}
-
 	// Validar id_rol si se proporciona
 	if user.Id_Rol != 0 && user.Id_Rol < 1 {
 		return fmt.Errorf("el id_rol debe ser un número positivo")
@@ -115,14 +98,4 @@ func (uc *CreateUserUseCase) validateUser(user entities.User) error {
 func (uc *CreateUserUseCase) isValidEmail(email string) bool {
 	email = strings.TrimSpace(email)
 	return strings.Contains(email, "@") && strings.Contains(email, ".")
-}
-
-func (uc *CreateUserUseCase) isValidDepartamento(departamento string) bool {
-	validDepartamentos := []string{"Finanzaz", "Gerencia Operativa", "General"}
-	for _, validDept := range validDepartamentos {
-		if strings.EqualFold(departamento, validDept) {
-			return true
-		}
-	}
-	return false
 }
