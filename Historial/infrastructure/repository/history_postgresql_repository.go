@@ -14,8 +14,8 @@ func NewHistoryPostgreSQLRepository(db *core.Conn_PostgreSQL)*HistoryPostgreSQLR
 	return&HistoryPostgreSQLRepository{db: db}
 }
 
-func (r *HistoryPostgreSQLRepository) SaveAction(history entities.ReceiveHistory) (int, error) {
-	res, err := r.db.ExecutePreparedQuery(
+func (r *HistoryPostgreSQLRepository) SaveAction(history entities.ReceiveHistory) (error) {
+	_, err := r.db.ExecutePreparedQuery(
 		"INSERT INTO history (movimiento, departamento, id_folder, id_file, id_user) VALUES	($1, $2, $3, $4, $5)",
 		history.Movimiento,
 		history.Departamento,
@@ -24,13 +24,9 @@ func (r *HistoryPostgreSQLRepository) SaveAction(history entities.ReceiveHistory
 		history.Id_user,
 	)
 	if err != nil {
-		return -1, fmt.Errorf("error al insertar registro en el historial: %v", err)
+		return fmt.Errorf("error al insertar registro en el historial: %v", err)
 	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		return -1, fmt.Errorf("error al obtener id de la última inserción: %v", err)
-	}
-	return int(id), nil
+	return nil
 }
 
 func (r *HistoryPostgreSQLRepository) GetHistory(departament string) ([]entities.SendHistory, error) {
@@ -40,7 +36,7 @@ func (r *HistoryPostgreSQLRepository) GetHistory(departament string) ([]entities
 	ON history.id_user = usuarios.id INNER JOIN folders ON history.id_folder = folders.id INNER JOIN files 
 	ON history.id_file = files.id WHERE history.departamento = $1`
 	
-	rows, err := r.db.DB.Query(query, "%"+departament+"%")
+	rows, err := r.db.DB.Query(query, departament)
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener historial: %v", err)
 	}

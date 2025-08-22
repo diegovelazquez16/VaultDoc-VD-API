@@ -13,10 +13,6 @@ func NewSaveActionsUseCase(repo repository.HistoryPostgreSQLRepo)*SaveActionUseC
 	return&SaveActionUseCase{repo: repo}
 }
 
-func(uc *SaveActionUseCase)Execute(record entities.ReceiveHistory)(*entities.ReceiveHistory, error){
-	id, err := uc.repo.SaveAction(record)
-	if err != nil {
-		return nil, err
-	}
-	return uc.repo.GetHistoryByID(id)
+func(uc *SaveActionUseCase)Execute(record entities.ReceiveHistory)(error){
+	return uc.repo.SaveAction(record)
 }

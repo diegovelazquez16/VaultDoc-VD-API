@@ -11,7 +11,9 @@ func SetupHistoryRoutes(
 	saveActions *controllers.SaveActionController,
 	getHistory *controllers.GetHistoryController,
 ){
-	r.Group("history")
-	r.POST("/", saveActions.Execute)
-	r.GET("/:departament", getHistory.Execute)
+	g := r.Group("history")
+	{
+		g.POST("/", saveActions.Execute)
+		g.GET("/:departament", getHistory.Execute)
+	}
 }

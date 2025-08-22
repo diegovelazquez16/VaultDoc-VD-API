@@ -29,7 +29,7 @@ func(c *SaveActionController)Execute(ctx *gin.Context){
 		return
 	}
 
-	createdRecord, err := c.uc.Execute(record)
+	err := c.uc.Execute(record)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Error interno al crear registro en el historial",
@@ -38,7 +38,11 @@ func(c *SaveActionController)Execute(ctx *gin.Context){
 		return
 	}
 
-	// Respuesta exitosa con información del usuario creado
+	ctx.JSON(http.StatusCreated, gin.H{
+		"message": "Registro en el historial creado",
+	})
+
+	/* Respuesta exitosa con información del usuario creado
 	ctx.JSON(http.StatusCreated, gin.H{
 		"message": "Usuario creado exitosamente",
 		"record": gin.H{
@@ -52,6 +56,7 @@ func(c *SaveActionController)Execute(ctx *gin.Context){
 		},
 		"sync_status": "local_saved",
 	})
+		*/
 }
 
 func (c *SaveActionController) validateRecordInput(record entities.ReceiveHistory) error {
