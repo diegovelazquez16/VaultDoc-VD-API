@@ -69,6 +69,35 @@ func (r *FilesPostgreSQLRepository) GetByID(id int) (entities.Files, error) {
 	return file, nil
 }
 
+func (r *FilesPostgreSQLRepository) GetByFolio(folio string) (entities.Files, error) {
+	var file entities.Files
+	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio 
+			  FROM files WHERE folio = $1`
+	
+	row := r.db.DB.QueryRow(query, folio)
+	err := row.Scan(
+		&file.Id,
+		&file.Departamento,
+		&file.Nombre,
+		&file.Tamano,
+		&file.Fecha,
+		&file.Folio,
+		&file.Extension,
+		&file.Id_Folder,
+		&file.Id_Uploader,
+		&file.Directorio, // Agregado el campo directorio
+	)
+	
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return file, fmt.Errorf("archivo con ID %d no encontrado", folio)
+		}
+		return file, fmt.Errorf("error al obtener archivo: %v", err)
+	}
+	
+	return file, nil
+}
+
 func (r *FilesPostgreSQLRepository) Update(file entities.Files) error {
 	query := `UPDATE files SET 
 			  departamento = $2, 
