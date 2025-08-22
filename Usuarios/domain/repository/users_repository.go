@@ -9,5 +9,6 @@ type UserRepository interface {
 	FindAll() ([]entities.User, error)
 	FindByEmail(email string) (*entities.User, error)
 	Update(user entities.User) error
+	UpdateProfile(user entities.User) error
 	Delete(id int) error
 }

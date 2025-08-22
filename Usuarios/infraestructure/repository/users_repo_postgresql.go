@@ -199,3 +199,34 @@ func (r *UserPostgreSQLRepository) Delete(id int) error {
 	
 	return nil
 }
+
+func (r *UserPostgreSQLRepository) UpdateProfile(user entities.User) error {
+	query := `
+		UPDATE usuarios 
+		SET nombre = $1, apellidos = $2, email = $3, password = $4
+		WHERE id = $5`
+	
+	result, err := r.db.ExecutePreparedQuery(
+		query,
+		user.Nombre,
+		user.Apellidos,
+		user.Email,
+		user.Password,
+		user.Id,
+	)
+	
+	if err != nil {
+		return fmt.Errorf("error al actualizar perfil de usuario: %w", err)
+	}
+	
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error al verificar filas afectadas: %w", err)
+	}
+	
+	if rowsAffected == 0 {
+		return fmt.Errorf("usuario con ID %d no encontrado para actualizar perfil", user.Id)
+	}
+	
+	return nil
+}

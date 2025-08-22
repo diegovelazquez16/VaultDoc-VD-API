@@ -25,6 +25,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	getAllUsersUseCase := application.NewGetUsersUseCase(userRepo)
 	getUserByIdUseCase := application.NewGetUserByIdUseCase(userRepo)
 	updateUserUseCase := application.NewUpdateUserUseCase(userRepo, bcryptService)
+	updateMyProfileUseCase := application.NewUpdateProfileUseCase(userRepo, bcryptService)
 	deleteUserUseCase := application.NewDeleteUserUseCase(userRepo)
 	loginUseCase := application.NewLoginUseCase(userRepo, tokenManager, bcryptService)
 
@@ -33,6 +34,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	getAllUsersController := controllers.NewGetAllUsersController(getAllUsersUseCase)
 	getUserByIdController := controllers.NewGetUserByIdUseController(getUserByIdUseCase)
 	updateUserController := controllers.NewUpdateUserController(updateUserUseCase)
+	updateMyProfileController := controllers.NewUpdateProfileController(updateMyProfileUseCase)
 	deleteUserController := controllers.NewDeleteUserController(deleteUserUseCase)
 	loginUserController := controllers.NewLoginUserController(loginUseCase)
 
@@ -43,6 +45,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 		getAllUsersController,
 		getUserByIdController,
 		updateUserController,
+		updateMyProfileController,
 		deleteUserController,
 		loginUserController,
 	)
