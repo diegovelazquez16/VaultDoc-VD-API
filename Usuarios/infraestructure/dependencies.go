@@ -24,6 +24,8 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	createUserUseCase := application.NewCreateUserUseCase(userRepo, bcryptService)
 	getAllUsersUseCase := application.NewGetUsersUseCase(userRepo)
 	getUserByIdUseCase := application.NewGetUserByIdUseCase(userRepo)
+	getUsersByDepartmentUseCase := application.NewGetUsersByDepartmentUseCase(userRepo)
+	getProfileUseCase := application.NewGetProfileUseCase(userRepo)
 	updateUserUseCase := application.NewUpdateUserUseCase(userRepo, bcryptService)
 	updateMyProfileUseCase := application.NewUpdateProfileUseCase(userRepo, bcryptService)
 	deleteUserUseCase := application.NewDeleteUserUseCase(userRepo)
@@ -33,6 +35,8 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	createUserController := controllers.NewCreateUserController(createUserUseCase)
 	getAllUsersController := controllers.NewGetAllUsersController(getAllUsersUseCase)
 	getUserByIdController := controllers.NewGetUserByIdUseController(getUserByIdUseCase)
+	getUsersByDepartmentController := controllers.NewGetUsersByDepartmentController(getUsersByDepartmentUseCase)
+	getProfileController := controllers.NewGetProfileController(getProfileUseCase)
 	updateUserController := controllers.NewUpdateUserController(updateUserUseCase)
 	updateMyProfileController := controllers.NewUpdateProfileController(updateMyProfileUseCase)
 	deleteUserController := controllers.NewDeleteUserController(deleteUserUseCase)
@@ -44,6 +48,8 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 		createUserController,
 		getAllUsersController,
 		getUserByIdController,
+		getUsersByDepartmentController,
+		getProfileController,
 		updateUserController,
 		updateMyProfileController,
 		deleteUserController,
