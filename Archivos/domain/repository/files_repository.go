@@ -11,4 +11,5 @@ type FilesRepository interface {
 	Update(file entities.Files) error
 	Delete(id int) error
 	GetAll() ([]entities.Files, error)
+	GetByFolder(folderId int) ([]entities.Files, error)
 }

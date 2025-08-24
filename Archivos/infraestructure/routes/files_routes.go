@@ -14,6 +14,7 @@ func SetupFilesRoutes(
 	createFileController *controllers.CreateFileController,
 	getFileByIdController *controllers.GetFileByIdController,
 	getAllFilesController *controllers.GetAllFilesController,
+	getFilesByFolderController *controllers.GetFilesByFolderController,
 	updateFileController *controllers.UpdateFileController,
 	deleteFileController *controllers.DeleteFileController,
 	downloadFileController *controllers.DownloadFileController,
@@ -28,28 +29,25 @@ func SetupFilesRoutes(
 
 	filesGroup := r.Group("files")
 	{
-
-
-		// CRUD de archivos
+		// cualquiera con autenticación
 		filesGroup.POST("/", service.AuthMiddleware(jwtSecret), createFileController.Execute)
 		filesGroup.GET("/:id", service.AuthMiddleware(jwtSecret), getFileByIdController.Execute)
-		filesGroup.GET("/", service.AuthMiddleware(jwtSecret), getAllFilesController.Execute)
+		filesGroup.GET("/folder/:folderId", service.AuthMiddleware(jwtSecret), getFilesByFolderController.Execute)
 		filesGroup.PUT("/:id", service.AuthMiddleware(jwtSecret), updateFileController.Execute)
 		filesGroup.DELETE("/:id", service.AuthMiddleware(jwtSecret), deleteFileController.Execute)
-
-		// Descarga de archivos por ruta
 		filesGroup.GET("/download/*dir", service.AuthMiddleware(jwtSecret), downloadFileController.Execute)
         
 		// solo el jefe de departamento:
 		// Permisos de edición
 		filesGroup.POST("/permissions/change", service.BossMiddleware(jwtSecret), grantChangePermissionController.Execute)
 		filesGroup.DELETE("/permissions/change", service.BossMiddleware(jwtSecret), removeChangePermissionController.Execute)
-
 		// Permisos de visualización
 		filesGroup.POST("/permissions/view", service.BossMiddleware(jwtSecret), grantViewPermissionController.Execute)
 		filesGroup.DELETE("/permissions/view", service.BossMiddleware(jwtSecret), removeViewPermissionController.Execute)
-		
 		// Verificar permisos
 		filesGroup.GET("/permissions/:fileId/:userId", service.BossMiddleware(jwtSecret), checkPermissionsController.Execute)
+
+		filesGroup.GET("/", service.AdminMiddleware(jwtSecret), getAllFilesController.Execute)
+
 	}
 }

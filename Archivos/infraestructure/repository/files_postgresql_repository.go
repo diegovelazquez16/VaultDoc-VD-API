@@ -56,7 +56,7 @@ func (r *FilesPostgreSQLRepository) GetByID(id int) (entities.Files, error) {
 		&file.Extension,
 		&file.Id_Folder,
 		&file.Id_Uploader,
-		&file.Directorio, // Agregado el campo directorio
+		&file.Directorio,
 	)
 	
 	if err != nil {
@@ -85,7 +85,7 @@ func (r *FilesPostgreSQLRepository) GetByFolio(folio string) (entities.Files, er
 		&file.Extension,
 		&file.Id_Folder,
 		&file.Id_Uploader,
-		&file.Directorio, // Agregado el campo directorio
+		&file.Directorio,
 	)
 	
 	if err != nil {
@@ -231,6 +231,45 @@ func (r *FilesPostgreSQLRepository) GetByDirectorio(directorio string) ([]entiti
 			return nil, fmt.Errorf("error al escanear archivo: %v", err)
 		}
 		files = append(files, file)
+	}
+	
+	return files, nil
+}
+
+func (r *FilesPostgreSQLRepository) GetByFolder(folderId int) ([]entities.Files, error) {
+	var files []entities.Files
+	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio 
+			  FROM files WHERE id_folder = $1 ORDER BY id ASC`
+	
+	rows, err := r.db.DB.Query(query, folderId)
+	if err != nil {
+		return nil, fmt.Errorf("error al obtener archivos por folder: %v", err)
+	}
+	defer rows.Close()
+	
+	for rows.Next() {
+		var file entities.Files
+		err := rows.Scan(
+			&file.Id,
+			&file.Departamento,
+			&file.Nombre,
+			&file.Tamano,
+			&file.Fecha,
+			&file.Folio,
+			&file.Extension,
+			&file.Id_Folder,
+			&file.Id_Uploader,
+			&file.Directorio,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error al escanear archivo: %v", err)
+		}
+		files = append(files, file)
+	}
+	
+	// Verificar errores durante la iteración
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error durante la iteración: %v", err)
 	}
 	
 	return files, nil

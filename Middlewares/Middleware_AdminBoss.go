@@ -1,4 +1,4 @@
-// Middlewares/Middleware_BossDepartment.go
+// Middlewares/Middleware_AdminBoss.go
 package service
 
 import (
@@ -9,8 +9,9 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-func BossMiddleware(jwtSecret string) gin.HandlerFunc {
+func AdminBossMiddleware(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Validación del token JWT
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
@@ -43,7 +44,7 @@ func BossMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		// Verificar que el rol sea boss (ID 2)
+		// Verificar que el rol esté presente
 		roleIDInterface, exists := claims["roleId"]
 		if !exists {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Rol no encontrado en el token"})
@@ -69,10 +70,10 @@ func BossMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		// Verificar que sea el rol boss (ID 2)
-		if roleID != 2 {
+		// Verificar que sea admin (ID 3) o jefe de departamento (ID 2)
+		if roleID != 2 && roleID != 3 {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error": "Acceso denegado. Solo los jefes de departamento pueden realizar esta acción",
+				"error": "Acceso denegado. Solo los administradores y jefes de departamento pueden realizar esta acción",
 			})
 			return
 		}
@@ -81,6 +82,13 @@ func BossMiddleware(jwtSecret string) gin.HandlerFunc {
 		c.Set("userID", claims["userId"])
 		c.Set("roleID", roleID)
 		c.Set("email", claims["email"])
+
+		// Información adicional sobre el tipo de acceso
+		if roleID == 3 {
+			c.Set("accessType", "admin")
+		} else if roleID == 2 {
+			c.Set("accessType", "boss")
+		}
 
 		c.Next()
 	}
