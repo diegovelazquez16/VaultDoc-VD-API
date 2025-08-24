@@ -1,9 +1,10 @@
-// controllers/create_user_controller.go
+// Usuarios/controllers/create_user_controller.go
 package controllers
 
 import (
 	"VaultDoc-VD/Usuarios/application"
 	"VaultDoc-VD/Usuarios/domain/entities"
+	"VaultDoc-VD/validators"
 	"fmt"
 	"net/http"
 	"strings"
@@ -20,6 +21,18 @@ func NewCreateUserController(useCase *application.CreateUserUseCase) *CreateUser
 }
 
 func (c *CreateUserController) Execute(ctx *gin.Context) {
+	// Verificar que el usuario autenticado sea admin (doble verificación)
+	roleID, exists := ctx.Get("roleID")
+	if !exists || roleID != 3 {
+		ctx.JSON(http.StatusForbidden, gin.H{
+			"error": "Acceso denegado. Solo los administradores pueden crear usuarios",
+		})
+		return
+	}
+
+	// Obtener información del admin que está creando el usuario
+	adminEmail, _ := ctx.Get("email")
+
 	var user entities.User
 	if err := ctx.ShouldBindJSON(&user); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -36,6 +49,11 @@ func (c *CreateUserController) Execute(ctx *gin.Context) {
 			"details": err.Error(),
 		})
 		return
+	}
+
+	// Si no se especifica rol, asignar rol de usuario regular (por ejemplo, ID 2)
+	if user.Id_Rol == 0 {
+		user.Id_Rol = 2 // O el ID que corresponda a "usuario regular"
 	}
 
 	// Ejecutar caso de uso
@@ -66,16 +84,18 @@ func (c *CreateUserController) Execute(ctx *gin.Context) {
 		return
 	}
 
-	// Respuesta exitosa con información del usuario creado
 	ctx.JSON(http.StatusCreated, gin.H{
 		"message": "Usuario creado exitosamente",
 		"user": gin.H{
-			"id":        createdUser.Id,
-			"email":     createdUser.Email,
-			"nombre":    createdUser.Nombre,
-			"apellidos": createdUser.Apellidos,
+			"id":           createdUser.Id,
+			"email":        createdUser.Email,
+			"nombre":       createdUser.Nombre,
+			"apellidos":    createdUser.Apellidos,
+			"id_rol":       createdUser.Id_Rol,
+			"departamento": createdUser.Departamento,
 		},
-		"sync_status": "local_saved", // Indica que se guardó localmente
+		"created_by":  adminEmail,
+		"sync_status": "local_saved",
 	})
 }
 
@@ -94,6 +114,25 @@ func (c *CreateUserController) validateUserInput(user entities.User) error {
 
 	if strings.TrimSpace(user.Nombre) == "" {
 		return fmt.Errorf("el nombre es requerido")
+	}
+
+	if strings.TrimSpace(user.Apellidos) == "" {
+		return fmt.Errorf("los apellidos son requeridos")
+	}
+
+	if user.Departamento != "" && !validators.IsValidDepartamento(user.Departamento) {
+		return fmt.Errorf("el departamento debe ser uno de los ya existentes")
+	}
+
+	// Validar que el rol sea válido
+	if user.Id_Rol != 0 {
+		if user.Id_Rol < 1 {
+			return fmt.Errorf("el id_rol debe ser un número positivo")
+		}
+		// Opcional: restringir la creación de otros admins
+		if user.Id_Rol == 3 {
+			return fmt.Errorf("no se puede asignar rol de administrador directamente")
+		}
 	}
 
 	return nil

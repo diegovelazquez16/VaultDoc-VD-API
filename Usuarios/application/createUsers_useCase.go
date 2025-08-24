@@ -1,4 +1,4 @@
-
+// Usuarios/application/createUsers_useCase.go
 package application
 
 import (
@@ -39,23 +39,24 @@ func (uc *CreateUserUseCase) Execute(user entities.User) (*entities.User, error)
 	}
 	user.Password = hashedPassword
 
+	// Limpiar y normalizar datos
 	user.Email = strings.ToLower(strings.TrimSpace(user.Email))
 	user.Nombre = strings.TrimSpace(user.Nombre)
 	user.Apellidos = strings.TrimSpace(user.Apellidos)
-	user.Id_Rol = 2
-	user.Departamento = "General"
+	user.Departamento = strings.TrimSpace(user.Departamento)
 
 	if err := uc.repo.Save(user); err != nil {
 		return nil, fmt.Errorf("error al guardar usuario: %w", err)
 	}
 
-	
+	// Obtener el usuario creado
 	createdUser, err := uc.repo.FindByEmail(user.Email)
 	if err != nil {
-		
+		// Si no se puede recuperar, retornar el usuario sin ID
 		return &user, nil
 	}
 
+	// Limpiar password antes de retornar
 	createdUser.Password = ""
 	
 	return createdUser, nil
@@ -86,8 +87,8 @@ func (uc *CreateUserUseCase) validateUser(user entities.User) error {
 		return fmt.Errorf("los apellidos son requeridos")
 	}
 
-	if strings.TrimSpace(user.Departamento) == "" {
-		return fmt.Errorf("el departamento es requerido")
+	if user.Id_Rol != 0 && user.Id_Rol < 1 {
+		return fmt.Errorf("el id_rol debe ser un número positivo")
 	}
 
 	return nil

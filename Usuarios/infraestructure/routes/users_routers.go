@@ -1,9 +1,10 @@
+// Usuarios/routes/users_routers.go
 package routes
 
 import (
 	"VaultDoc-VD/Usuarios/infraestructure/controllers"
-	_ "VaultDoc-VD/Usuarios/infraestructure/services"
-	_ "os"
+	"VaultDoc-VD/Middlewares"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,17 +12,30 @@ import (
 func SetupUserRoutes(r *gin.Engine, createUserController *controllers.CreateUserController,
 	getUsersController *controllers.GetAllUsersController,
 	getUsersControllerById *controllers.GetUserByIdController,
+	getUsersByDepartmentController *controllers.GetUsersByDepartmentController,
+	getProfileController *controllers.GetProfileController,
 	updateUserController *controllers.UpdateUserController,
+	updateProfileController *controllers.UpdateProfileController,
 	deleteUserController *controllers.DeleteUserController,
 	loginUserController *controllers.LoginUserController,
 ) {
-	//jwtSecret := os.Getenv("JWT_SECRET")
+	jwtSecret := os.Getenv("JWT_SECRET")
 
-	r.POST("/users", createUserController.Execute)
-	r.GET("/users", getUsersController.Execute)
-	r.GET("/users/:id", getUsersControllerById.Execute)
-	r.PUT("/users/:id", updateUserController.Execute)
-	r.DELETE("/users/:id", deleteUserController.Execute)
+	// solo el admin
+	r.POST("/users", service.AdminMiddleware(jwtSecret), createUserController.Execute)
+	r.DELETE("/users/:id", service.AdminMiddleware(jwtSecret), deleteUserController.Execute)
+	r.GET("/users", service.AdminMiddleware(jwtSecret), getUsersController.Execute)
+	r.GET("/users/:id", service.AdminMiddleware(jwtSecret), getUsersControllerById.Execute)
+	r.PUT("/users/:id", service.AdminMiddleware(jwtSecret), updateUserController.Execute)
+
+	// admin y jefe de departamento
+	r.GET("/users/department/:departamento", service.AdminBossMiddleware(jwtSecret), getUsersByDepartmentController.Execute)
+
+	// cualquier usuario autenticado
+	r.GET("/users/profile", service.AuthMiddleware(jwtSecret), getProfileController.Execute)
+	r.PUT("/users/profile", service.AuthMiddleware(jwtSecret), updateProfileController.Execute)
+
+	// sin autenticación
 	r.POST("/users/login", loginUserController.Execute)
 
 }

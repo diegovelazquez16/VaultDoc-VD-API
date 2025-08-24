@@ -1,3 +1,4 @@
+//core/cors.go
 package core
 
 import (

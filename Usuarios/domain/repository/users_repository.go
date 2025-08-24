@@ -1,3 +1,4 @@
+// Usuarios/domain/repository/users_repository.go
 package repository
 
 import "VaultDoc-VD/Usuarios/domain/entities"
@@ -8,5 +9,8 @@ type UserRepository interface {
 	FindAll() ([]entities.User, error)
 	FindByEmail(email string) (*entities.User, error)
 	Update(user entities.User) error
+	UpdateProfile(user entities.User) error
+	GetProfile(userID int) (*entities.User, error)
+	FindByDepartment(departamento string) ([]entities.User, error)
 	Delete(id int) error
 }
