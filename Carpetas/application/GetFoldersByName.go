@@ -4,6 +4,7 @@ package application
 import (
 	"VaultDoc-VD/Carpetas/domain/entities"
 	"VaultDoc-VD/Carpetas/domain/repository"
+	"VaultDoc-VD/Carpetas/domain/services"
 	"VaultDoc-VD/core"
 )
 
@@ -12,7 +13,7 @@ type GetFolderByNameUseCase struct {
 	nextcloudClient *core.NextcloudClient
 }
 
-func NewGetFolderByName(repo repository.FoldersRepository) *GetFolderByNameUseCase {
+func NewGetFolderByName(repo repository.FoldersRepository, cloudService services.CloudStorageService) *GetFolderByNameUseCase {
 	return &GetFolderByNameUseCase{
 		repo:           repo,
 		nextcloudClient: core.NewNextcloudClient(),

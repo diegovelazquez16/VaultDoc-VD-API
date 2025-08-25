@@ -1,23 +1,23 @@
-//Carpetas/application/CreateFolderUC.go
+// Carpetas/application/CreateFolderUC.go
 package application
 
 import (
 	"VaultDoc-VD/Carpetas/domain/entities"
 	"VaultDoc-VD/Carpetas/domain/repository"
-	"VaultDoc-VD/core"
+	"VaultDoc-VD/Carpetas/domain/services"
 	"fmt"
 	"strings"
 )
 
 type CreateFolderUseCase struct {
-	repo           repository.FoldersRepository
-	nextcloudClient *core.NextcloudClient
+	repo         repository.FoldersRepository
+	cloudService services.CloudStorageService // Usar la interfaz del dominio
 }
 
-func NewCreateFolderUseCase(repo repository.FoldersRepository) *CreateFolderUseCase {
+func NewCreateFolderUseCase(repo repository.FoldersRepository, cloudService services.CloudStorageService) *CreateFolderUseCase {
 	return &CreateFolderUseCase{
-		repo:           repo,
-		nextcloudClient: core.NewNextcloudClient(),
+		repo:         repo,
+		cloudService: cloudService, // Usar el parámetro recibido
 	}
 }
 
@@ -27,6 +27,7 @@ func (uc CreateFolderUseCase) Execute(name, departament string, id_uploader int)
 	if err != nil {
 		return nil, fmt.Errorf("Error al buscar folder: %s", err)
 	}
+
 	if len(equalFolders) > 0 {
 		return nil, fmt.Errorf("el folder %s ya está registrado", name)
 	}
@@ -36,9 +37,9 @@ func (uc CreateFolderUseCase) Execute(name, departament string, id_uploader int)
 	cleanDepartment := strings.TrimSpace(departament)
 	cleanName := strings.TrimSpace(name)
 	folderPath := fmt.Sprintf("%s/%s", cleanDepartment, cleanName)
-	
+
 	// Verificar si la carpeta completa ya existe en Nextcloud
-	exists, err := uc.nextcloudClient.FolderExists(folderPath)
+	exists, err := uc.cloudService.FolderExists(folderPath)
 	if err != nil {
 		// Log del error pero continuamos (Nextcloud podría estar temporalmente no disponible)
 		fmt.Printf("Warning: No se pudo verificar carpeta en Nextcloud: %v\n", err)
@@ -47,27 +48,25 @@ func (uc CreateFolderUseCase) Execute(name, departament string, id_uploader int)
 	}
 
 	// Crear la carpeta en Nextcloud (esto creará recursivamente departamento/nombre)
-	err = uc.nextcloudClient.CreateFolder(folderPath)
+	err = uc.cloudService.CreateFolder(folderPath)
 	if err != nil {
 		return nil, fmt.Errorf("Error al crear carpeta en Nextcloud: %s", err)
 	}
 
 	// Si la creación en Nextcloud fue exitosa, guardar en base de datos
 	newFolder := &entities.Folders{
-		Id:          0,
-		Name:        cleanName,
+		Id:           0,
+		Name:         cleanName,
 		Departamento: cleanDepartment,
-		Id_uploader: id_uploader,
+		Id_uploader:  id_uploader,
 	}
 
 	err = uc.repo.CreateFolder(*newFolder)
 	if err != nil {
 		// Si falla la BD, podríamos considerar eliminar la carpeta de Nextcloud pero por simplicidad, solo devolvemos el error
-		
 		return nil, fmt.Errorf("Error al registrar folder en base de datos: %s", err)
 	}
 
-	
 	folder, err := uc.repo.GetFolderByFullName(cleanName)
 	if err != nil {
 		return nil, err
