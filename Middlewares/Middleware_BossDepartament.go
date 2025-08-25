@@ -3,7 +3,7 @@ package service
 
 import (
 	"net/http"
-	"strconv"
+	//"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
@@ -43,14 +43,14 @@ func BossMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		// Verificar que el rol sea boss (ID 2)
+		/*/ Verificar que el rol sea boss (ID 2)
 		roleIDInterface, exists := claims["roleId"]
 		if !exists {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Rol no encontrado en el token"})
 			return
 		}
 
-		// Convertir roleId a int (puede venir como float64 desde JWT)
+		/ Convertir roleId a int (puede venir como float64 desde JWT)
 		var roleID int
 		switch v := roleIDInterface.(type) {
 		case float64:
@@ -76,10 +76,10 @@ func BossMiddleware(jwtSecret string) gin.HandlerFunc {
 			})
 			return
 		}
-
+			*/
 		// Guardar información del usuario en el contexto
 		c.Set("userID", claims["userId"])
-		c.Set("roleID", roleID)
+		/*c.Set("roleID", roleID)*/
 		c.Set("email", claims["email"])
 
 		c.Next()
