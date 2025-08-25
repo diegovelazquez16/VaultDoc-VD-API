@@ -1,10 +1,9 @@
-// Archivos/infrastructure/controllers/download_file_controller.go
+// Archivos/infrastructure/controllers/download_file_controller.go (Actualizado)
 package controllers
 
 import (
 	"net/http"
-	"path/filepath"
-	
+	"strconv"
 	"VaultDoc-VD/Archivos/application"
 	"github.com/gin-gonic/gin"
 )
@@ -18,27 +17,28 @@ func NewDownloadFileController(useCase *application.DownloadFileUseCase) *Downlo
 }
 
 func (c *DownloadFileController) Execute(ctx *gin.Context) {
-	// 1. Obtener la ruta del parámetro wildcard (*dir)
-	dir := ctx.Param("dir")
-	if dir == "" {
+	// 1. Obtener el ID del archivo de los parámetros de la URL
+	idParam := ctx.Param("id")
+	if idParam == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "Ruta de directorio requerida",
-			"error":   "Especifica la ruta del archivo a descargar",
+			"message": "ID del archivo requerido",
+			"error":   "Especifica el ID del archivo a descargar",
 		})
 		return
 	}
 
-	// 2. Extraer el nombre del archivo de la ruta
-	filename := filepath.Base(dir)
-	dirPath := filepath.Dir(dir)
-	
-	// Si dir es solo el nombre del archivo, dirPath será "."
-	if dirPath == "." {
-		dirPath = ""
+	// 2. Convertir ID a entero
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "ID inválido",
+			"error":   "El ID debe ser un número entero válido",
+		})
+		return
 	}
 
-	// 3. Ejecutar caso de uso para verificar que el archivo existe
-	fullPath, err := c.useCase.Execute(dirPath, filename)
+	// 3. Ejecutar caso de uso para descargar desde Nextcloud
+	content, fileName, err := c.useCase.Execute(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{
 			"message": "Archivo no encontrado",
@@ -49,9 +49,10 @@ func (c *DownloadFileController) Execute(ctx *gin.Context) {
 
 	// 4. Configurar headers para la descarga
 	ctx.Header("Content-Description", "File Transfer")
-	ctx.Header("Content-Disposition", "attachment; filename="+filename)
+	ctx.Header("Content-Disposition", "attachment; filename="+fileName)
 	ctx.Header("Content-Type", "application/octet-stream")
+	ctx.Header("Content-Length", strconv.Itoa(len(content)))
 
-	// 5. Enviar el archivo
-	ctx.File(fullPath)
+	// 5. Enviar el contenido del archivo
+	ctx.Data(http.StatusOK, "application/octet-stream", content)
 }
