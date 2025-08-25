@@ -148,6 +148,19 @@ func (r *FoldersPostgreSQLRepository) GetFoldersByDepartamentComplete(department
 		if err != nil {
 			return nil, fmt.Errorf("error al escanear folder: %w", err)
 		}
+
+		t, err := time.Parse(time.RFC3339Nano, folder.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error al formatear fecha: %w", err)
+		}
+		folder.CreatedAt = t.Format("02/01/2006 15:04")
+
+		t, err = time.Parse(time.RFC3339Nano, folder.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error al formatear fecha: %w", err)
+		}
+		folder.UpdatedAt = t.Format("02/01/2006 15:04")
+
 		folders = append(folders, folder)
 	}
 
