@@ -1,4 +1,4 @@
-/// Archivos/infrastructure/controllers/create_file_controller.go (Actualizado)
+// Archivos/infrastructure/controllers/create_file_controller.go
 package controllers
 
 import (
@@ -127,7 +127,26 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		finalFileName += fileExtension
 	}
 
-	// 7. Crear entidad para la base de datos
+	// 7. Obtener el departamento del usuario desde el middleware
+	userDepartmentInterface, exists := ctx.Get("department")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Error del sistema",
+			"error":   "No se pudo obtener el departamento del usuario",
+		})
+		return
+	}
+	
+	userDepartment, ok := userDepartmentInterface.(string)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Error del sistema",
+			"error":   "Formato de departamento inválido",
+		})
+		return
+	}
+
+	// 8. Crear entidad para la base de datos
 	fileEntity := entities.Files{
 		Departamento: input.Departamento,
 		Nombre:       finalFileName,
@@ -140,15 +159,14 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		Asunto:       input.Asunto,
 	}
 
-	
-	if err := c.useCase.Execute(fileEntity, file); err != nil {
+	// 9. Ejecutar el caso de uso pasando el departamento del usuario
+	if err := c.useCase.Execute(fileEntity, file, userDepartment); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Error al crear archivo",
 			"error":   err.Error(),
 		})
 		return
 	}
-
 
 	ctx.JSON(http.StatusCreated, gin.H{
 		"message":     "Archivo creado exitosamente en Nextcloud",

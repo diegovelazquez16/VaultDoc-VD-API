@@ -82,6 +82,7 @@ func AdminMiddleware(jwtSecret string) gin.HandlerFunc {
 		c.Set("userID", claims["userId"])
 		c.Set("roleID", roleID)
 		c.Set("email", claims["email"])
+		c.Set("department", claims["department"])
 
 		c.Next()
 	}
