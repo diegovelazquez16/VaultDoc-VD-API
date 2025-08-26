@@ -14,14 +14,15 @@ import (
 )
 
 func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
-	// Inicializar repositories
+	// Inicializar repositories y adaptadores
 	filesStorageService := adapters.NewNextcloudFileAdapter()
+	userService := adapters.NewUserPostgreSQLAdapter(dbPool)
 	filesRepo := repository.NewFilesPostgreSQLRepository(dbPool)
 	changeFileRepo := repository.NewChangeFilePostgreSQLRepository(dbPool)
 	viewFileRepo := repository.NewViewFilePostgreSQLRepository(dbPool)
 
 	// Inicializar use cases
-	createFileUseCase := application.NewCreateFileUseCase(filesRepo, filesStorageService)
+	createFileUseCase := application.NewCreateFileUseCase(filesRepo, filesStorageService, changeFileRepo, viewFileRepo, userService)
 	getFileByIdUseCase := application.NewGetFileByIdUseCase(filesRepo)
 	getAllFilesUseCase := application.NewGetAllFilesUseCase(filesRepo)
 	getFilesByFolderUseCase := application.NewGetFilesByFolderUseCase(filesRepo)

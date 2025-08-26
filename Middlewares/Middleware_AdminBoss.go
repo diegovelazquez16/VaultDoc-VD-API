@@ -11,7 +11,6 @@ import (
 
 func AdminBossMiddleware(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Validación del token JWT
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
@@ -70,7 +69,6 @@ func AdminBossMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		// Verificar que sea admin (ID 3) o jefe de departamento (ID 2)
 		if roleID != 2 && roleID != 3 {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"error": "Acceso denegado. Solo los administradores y jefes de departamento pueden realizar esta acción",
@@ -78,10 +76,10 @@ func AdminBossMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		// Guardar información del usuario en el contexto
 		c.Set("userID", claims["userId"])
 		c.Set("roleID", roleID)
 		c.Set("email", claims["email"])
+		c.Set("department", claims["department"])
 
 		// Información adicional sobre el tipo de acceso
 		if roleID == 3 {

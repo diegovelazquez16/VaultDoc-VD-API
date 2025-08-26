@@ -1,4 +1,4 @@
-// Archivos/application/download_file_usecase.go (Modificado)
+// Archivos/application/download_file_usecase.go
 package application
 
 import (
