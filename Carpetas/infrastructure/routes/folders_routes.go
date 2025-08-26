@@ -21,7 +21,7 @@ func SetUpFoldersRoutes(
 		// solo el jefe de departamento:
 		g.POST("/", service.BossMiddleware(jwtSecret), createFolderController.Execute)
 		// cualquier usuario autenticado
-		g.GET("/:departament", service.AuthMiddleware(jwtSecret), getFoldersByDepartamentController.Execute)
+		g.GET("/:departament", getFoldersByDepartamentController.Execute)
 		g.GET("/n/:folder", service.AuthMiddleware(jwtSecret), getFolderByNameController.Execute)
 	}
 }
