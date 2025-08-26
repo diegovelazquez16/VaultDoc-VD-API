@@ -135,15 +135,14 @@ func (r *FoldersPostgreSQLRepository) GetFoldersByDepartamentComplete(department
 	var folders []entities.Folders
 	for rows.Next() {
 		var folder entities.Folders
-		var createdAt, updatedAt time.Time 
 		
 		err := rows.Scan(
 			&folder.Id,
 			&folder.Name,
 			&folder.Departamento,
 			&folder.Id_uploader,
-			&createdAt,    
-			&updatedAt,    
+			&folder.CreatedAt,    
+			&folder.UpdatedAt,    
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error al escanear folder: %w", err)
