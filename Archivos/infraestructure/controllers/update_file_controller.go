@@ -1,12 +1,14 @@
-// Archivos/infrastructure/controllers/update_file_controller.go
+// Archivos/infrastructure/controllers/update_file_controller.go (Actualizado)
 package controllers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"VaultDoc-VD/Archivos/application"
 	entities "VaultDoc-VD/Archivos/domain/entities"
 	"github.com/gin-gonic/gin"
+	
 )
 
 type UpdateFileController struct {
@@ -18,36 +20,69 @@ func NewUpdateFileController(useCase *application.UpdateFileUseCase) *UpdateFile
 }
 
 func (c *UpdateFileController) Execute(ctx *gin.Context) {
-	idStr := ctx.Param("id")
-	id, err := strconv.Atoi(idStr)
+	// 1. Obtener ID del archivo
+	idParam := ctx.Param("id")
+	if idParam == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "ID del archivo requerido",
+		})
+		return
+	}
+
+	id, err := strconv.Atoi(idParam)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "ID de archivo no válido",
-			"error":   err.Error(),
+			"message": "ID inválido",
+			"error":   "El ID debe ser un número entero válido",
 		})
 		return
 	}
 
-	var input struct {
-		Departamento string `json:"departamento" binding:"required"`
-		Nombre       string `json:"nombre" binding:"required"`
-		Tamano       int    `json:"tamano" binding:"required"`
-		Fecha        string `json:"fecha" binding:"required"`
-		Folio        string `json:"folio" binding:"required"`
-		Extension    string `json:"extension" binding:"required"`
-		Id_Folder    int    `json:"id_folder" binding:"required"`
-		Id_Uploader  int    `json:"id_uploader" binding:"required"`
-	}
+	// 2. Verificar si viene un archivo nuevo (opcional para actualización)
+	file, err := ctx.FormFile("file")
+	hasNewFile := err == nil && file != nil
 
-	if err := ctx.ShouldBindJSON(&input); err != nil {
+	// 3. Obtener los datos JSON del form-data
+	jsonData := ctx.PostForm("json")
+	if jsonData == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "Entrada de datos no válida",
+			"message": "Campo 'json' es requerido",
+		})
+		return
+	}
+
+	// 4. Parsear el JSON
+	var input struct {
+		Departamento string `json:"departamento"`
+		Asunto       string `json:"asunto"`
+		Nombre       string `json:"nombre"`
+		Tamano       int    `json:"tamano"`
+		Fecha        string `json:"fecha"`
+		Folio        string `json:"folio"`
+		Extension    string `json:"extension"`
+		Id_Folder    int    `json:"id_folder"`
+		Id_Uploader  int    `json:"id_uploader"`
+	}
+
+	if err := json.Unmarshal([]byte(jsonData), &input); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "Error al parsear datos JSON",
 			"error":   err.Error(),
 		})
 		return
 	}
 
-	file := entities.Files{
+	
+	/* // 5. Si hay archivo nuevo, actualizar información del archivo
+	if hasNewFile {
+		input.Tamano = int(file.Size)
+		if input.Extension == "" {
+			input.Extension = filepath.Ext(file.Filename)
+		}
+	}
+	*/
+	// 6. Crear entidad para actualizar
+	fileEntity := entities.Files{
 		Id:           id,
 		Departamento: input.Departamento,
 		Nombre:       input.Nombre,
@@ -57,9 +92,17 @@ func (c *UpdateFileController) Execute(ctx *gin.Context) {
 		Extension:    input.Extension,
 		Id_Folder:    input.Id_Folder,
 		Id_Uploader:  input.Id_Uploader,
+		Asunto:       input.Asunto, 
 	}
 
-	if err := c.useCase.Execute(file); err != nil {
+
+	if hasNewFile {
+		err = c.useCase.Execute(fileEntity, file)
+	} else {
+		err = c.useCase.Execute(fileEntity, nil)
+	}
+
+	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Error al actualizar archivo",
 			"error":   err.Error(),
@@ -67,7 +110,18 @@ func (c *UpdateFileController) Execute(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Archivo actualizado exitosamente",
-	})
+
+	response := gin.H{
+		"message":    "Archivo actualizado exitosamente",
+		"id":         id,
+		"department": input.Departamento,
+		"subject":    input.Asunto,
+	}
+
+	if hasNewFile {
+		response["new_file"] = "Archivo físico actualizado en Nextcloud"
+		response["size"] = input.Tamano
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }

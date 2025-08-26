@@ -1,20 +1,23 @@
-// Archivos/application/delete_file_usecase.go
+// Archivos/application/delete_file_usecase.go (Modificado)
 package application
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	
+	"strings"
 	"VaultDoc-VD/Archivos/domain/repository"
+	"VaultDoc-VD/Archivos/domain/services"
 )
 
 type DeleteFileUseCase struct {
-	repo repository.FilesRepository
+	repo               repository.FilesRepository
+	fileStorageService services.FileStorageService
 }
 
-func NewDeleteFileUseCase(repo repository.FilesRepository) *DeleteFileUseCase {
-	return &DeleteFileUseCase{repo: repo}
+func NewDeleteFileUseCase(repo repository.FilesRepository, fileStorageService services.FileStorageService) *DeleteFileUseCase {
+	return &DeleteFileUseCase{
+		repo:               repo,
+		fileStorageService: fileStorageService,
+	}
 }
 
 func (uc *DeleteFileUseCase) Execute(id int) error {
@@ -24,25 +27,15 @@ func (uc *DeleteFileUseCase) Execute(id int) error {
 		return fmt.Errorf("archivo no encontrado en base de datos: %v", err)
 	}
 
-	// 2. Construir la ruta completa del archivo físico
-	baseDir := os.Getenv("FILES_DIR")
-	if baseDir == "" {
-		return fmt.Errorf("FILES_DIR no está configurado")
-	}
+	// 2. Extraer folderPath y fileName del directorio almacenado
+	folderPath, fileName := uc.parsePath(file.Directorio)
 
-	fullPath := filepath.Join(baseDir, file.Directorio)
-	
-	// 3. Eliminar el archivo físico si existe
-	if _, err := os.Stat(fullPath); err == nil {
-		// El archivo existe, eliminarlo
-		if err := os.Remove(fullPath); err != nil {
-			fmt.Printf("Advertencia: No se pudo eliminar archivo físico %s: %v\n", fullPath, err)
-			// Continuar con la eliminación de la BD aunque falle el archivo físico
-		} else {
-			fmt.Printf("Archivo físico eliminado: %s\n", fullPath)
-		}
+	// 3. Eliminar el archivo de Nextcloud
+	if err := uc.fileStorageService.DeleteFile(folderPath, fileName); err != nil {
+		fmt.Printf("Warning: No se pudo eliminar archivo de Nextcloud: %v\n", err)
+		// Continuar con la eliminación de la BD aunque falle Nextcloud
 	} else {
-		fmt.Printf("Archivo físico no encontrado (puede que ya haya sido eliminado): %s\n", fullPath)
+		fmt.Printf("Archivo eliminado de Nextcloud: %s\n", file.Directorio)
 	}
 
 	// 4. Eliminar el registro de la base de datos
@@ -52,4 +45,16 @@ func (uc *DeleteFileUseCase) Execute(id int) error {
 
 	fmt.Printf("Archivo eliminado exitosamente: ID %d, Nombre: %s\n", id, file.Nombre)
 	return nil
+}
+
+// Para rutas completas
+func (uc *DeleteFileUseCase) parsePath(fullPath string) (string, string) {
+	parts := strings.Split(fullPath, "/")
+	if len(parts) <= 1 {
+		return "", fullPath
+	}
+	
+	fileName := parts[len(parts)-1]
+	folderPath := strings.Join(parts[:len(parts)-1], "/")
+	return folderPath, fileName
 }

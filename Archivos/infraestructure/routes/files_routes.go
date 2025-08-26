@@ -35,7 +35,7 @@ func SetupFilesRoutes(
 		filesGroup.GET("/folder/:folderId", service.AuthMiddleware(jwtSecret), getFilesByFolderController.Execute)
 		filesGroup.PUT("/:id", service.AuthMiddleware(jwtSecret), updateFileController.Execute)
 		filesGroup.DELETE("/:id", service.AuthMiddleware(jwtSecret), deleteFileController.Execute)
-		filesGroup.GET("/download/*dir", service.AuthMiddleware(jwtSecret), downloadFileController.Execute)
+		filesGroup.GET("/download/:id", service.AuthMiddleware(jwtSecret), downloadFileController.Execute)
         
 		// solo el jefe de departamento:
 		// Permisos de edición
