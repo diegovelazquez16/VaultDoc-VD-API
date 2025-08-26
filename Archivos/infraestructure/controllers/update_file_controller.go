@@ -7,16 +7,19 @@ import (
 	"strconv"
 	"VaultDoc-VD/Archivos/application"
 	entities "VaultDoc-VD/Archivos/domain/entities"
+	history "VaultDoc-VD/Historial/application"
+	historyEntities "VaultDoc-VD/Historial/domain/entities"
 	"github.com/gin-gonic/gin"
 	
 )
 
 type UpdateFileController struct {
 	useCase *application.UpdateFileUseCase
+	historyUseCase *history.SaveActionUseCase
 }
 
-func NewUpdateFileController(useCase *application.UpdateFileUseCase) *UpdateFileController {
-	return &UpdateFileController{useCase: useCase}
+func NewUpdateFileController(useCase *application.UpdateFileUseCase, historyUseCase *history.SaveActionUseCase) *UpdateFileController {
+	return &UpdateFileController{useCase: useCase, historyUseCase: historyUseCase}
 }
 
 func (c *UpdateFileController) Execute(ctx *gin.Context) {
@@ -29,7 +32,24 @@ func (c *UpdateFileController) Execute(ctx *gin.Context) {
 		return
 	}
 
+	idUser := ctx.Param("id_user")
+	if idUser == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "ID del usuario requerido",
+		})
+		return
+	}
+
 	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "ID inválido",
+			"error":   "El ID debe ser un número entero válido",
+		})
+		return
+	}
+
+	id_user, err := strconv.Atoi(idUser)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"message": "ID inválido",
@@ -121,6 +141,22 @@ func (c *UpdateFileController) Execute(ctx *gin.Context) {
 	if hasNewFile {
 		response["new_file"] = "Archivo físico actualizado en Nextcloud"
 		response["size"] = input.Tamano
+	}
+
+	var record historyEntities.ReceiveHistory
+	record.Departamento = input.Departamento
+	record.Id_user = id_user
+	record.Id_folder = input.Id_Folder
+	record.Id_file = id
+	record.Movimiento = "Modificó información de un archivo"
+
+	err = c.historyUseCase.Execute(record)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Error interno al crear registro en el historial",
+			"details": err.Error(),
+		})
+		return
 	}
 
 	ctx.JSON(http.StatusOK, response)

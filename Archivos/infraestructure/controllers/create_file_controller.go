@@ -9,16 +9,24 @@ import (
 	"time"
 	
 	"VaultDoc-VD/Archivos/application"
+	history "VaultDoc-VD/Historial/application"
 	entities "VaultDoc-VD/Archivos/domain/entities"
+	historyEntities "VaultDoc-VD/Historial/domain/entities"
 	"github.com/gin-gonic/gin"
 )
 
 type CreateFileController struct {
 	useCase *application.CreateFileUseCase
+	historyUseCase *history.SaveActionUseCase
+	ucGetbyName *application.GetFileByNameUseCase
 }
 
-func NewCreateFileController(useCase *application.CreateFileUseCase) *CreateFileController {
-	return &CreateFileController{useCase: useCase}
+func NewCreateFileController(
+	useCase *application.CreateFileUseCase,
+	uc *history.SaveActionUseCase,
+	ucGetByName *application.GetFileByNameUseCase,
+	) *CreateFileController {
+	return &CreateFileController{useCase: useCase, historyUseCase: uc, ucGetbyName: ucGetByName}
 }
 
 func (c *CreateFileController) Execute(ctx *gin.Context) {
@@ -164,6 +172,32 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Error al crear archivo",
 			"error":   err.Error(),
+		})
+		return
+	}
+
+	newFile, err := c.ucGetbyName.Execute(input.Nombre)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"message": "Archivo no encontrado",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+
+	var record historyEntities.ReceiveHistory
+	record.Departamento = input.Departamento
+	record.Id_user = input.Id_Uploader
+	record.Id_folder = input.Id_Folder
+	record.Id_file = newFile.Id
+	record.Movimiento = "Subió archivoo"
+
+	err = c.historyUseCase.Execute(record)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Error interno al crear registro en el historial",
+			"details": err.Error(),
 		})
 		return
 	}

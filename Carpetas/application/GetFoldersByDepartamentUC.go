@@ -22,7 +22,7 @@ func NewGetFoldersByDepartamentUseCase(repo repository.FoldersRepository, cloudS
 
 func (uc *GetFoldersByDepartamentUseCase) Execute(departament string) ([]entities.Folders, error) {
 	
-	dbFolders, err := uc.repo.GetFoldersByDepartament(departament)
+	dbFolders, err := uc.repo.GetFoldersByDepartamentComplete(departament)
 	if err != nil {
 		return nil, err
 	}
