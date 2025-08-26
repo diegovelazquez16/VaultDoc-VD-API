@@ -39,8 +39,8 @@ func (uc *CreateFileUseCase) Execute(file entities.Files, fileHeader *multipart.
 		return fmt.Errorf("validación fallida: %v", err)
 	}
 
-	// Construir la ruta de la carpeta (departamento/asunto)
-	folderPath := fmt.Sprintf("%s/%s", file.Departamento, file.Asunto)
+	// Construir la ruta de la carpeta (departamento solamente, sin asunto)
+	folderPath := file.Departamento
 
 	// Verificar que el archivo no existe ya en Nextcloud
 	exists, err := uc.fileStorageService.FileExists(folderPath, file.Nombre)
@@ -145,9 +145,6 @@ func (uc *CreateFileUseCase) validateFile(file entities.Files) error {
 	}
 	if file.Folio == "" {
 		return fmt.Errorf("folio es requerido")
-	}
-	if file.Asunto == "" {
-		return fmt.Errorf("asunto es requerido")
 	}
 	if file.Id_Folder <= 0 {
 		return fmt.Errorf("id_folder debe ser mayor a 0")
