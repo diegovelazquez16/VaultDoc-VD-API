@@ -12,6 +12,8 @@ import (
 func SetupUserRoutes(r *gin.Engine, createUserController *controllers.CreateUserController,
 	getUsersController *controllers.GetAllUsersController,
 	getUsersControllerById *controllers.GetUserByIdController,
+	getUsersByDepartmentController *controllers.GetUsersByDepartmentController,
+	getProfileController *controllers.GetProfileController,
 	updateUserController *controllers.UpdateUserController,
 	updateProfileController *controllers.UpdateProfileController,
 	deleteUserController *controllers.DeleteUserController,
@@ -26,9 +28,11 @@ func SetupUserRoutes(r *gin.Engine, createUserController *controllers.CreateUser
 	r.GET("/users/:id", service.AdminMiddleware(jwtSecret), getUsersControllerById.Execute)
 	r.PUT("/users/:id", service.AdminMiddleware(jwtSecret), updateUserController.Execute)
 
-    // solo el jefe de departamento
+	// admin y jefe de departamento
+	r.GET("/users/department/:departamento", service.AdminBossMiddleware(jwtSecret), getUsersByDepartmentController.Execute)
 
 	// cualquier usuario autenticado
+	r.GET("/users/profile", service.AuthMiddleware(jwtSecret), getProfileController.Execute)
 	r.PUT("/users/profile", service.AuthMiddleware(jwtSecret), updateProfileController.Execute)
 
 	// sin autenticación

@@ -8,7 +8,9 @@ import (
 type FilesRepository interface {
 	Create(file entities.Files) error
 	GetByID(id int) (entities.Files, error)
+	GetByFolio(folio string) (entities.Files, error)
 	Update(file entities.Files) error
 	Delete(id int) error
 	GetAll() ([]entities.Files, error)
+	GetByFolder(folderId int) ([]entities.Files, error)
 }

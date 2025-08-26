@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
-	_"strconv"
 	"time"
 	
 	"VaultDoc-VD/Archivos/application"
@@ -47,12 +45,12 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 	// 3. Parsear el JSON
 	var input struct {
 		Departamento string `json:"departamento" binding:"required"`
-		Asunto       string `json:"asunto" binding:"required"`       // Nueva carpeta dentro del departamento
-		Nombre       string `json:"nombre" binding:"required"`       // SOTCH-DVD-004-2025
-		Tamano       int    `json:"tamano"`                         // Se calculará automáticamente
-		Fecha        string `json:"fecha"`                          // Se asignará automáticamente si no viene
+		Asunto       string `json:"asunto" binding:"required"`       
+		Nombre       string `json:"nombre" binding:"required"`       
+		Tamano       int    `json:"tamano"`                         
+		Fecha        string `json:"fecha"`                         
 		Folio        string `json:"folio" binding:"required"`
-		Extension    string `json:"extension"`                      // Se obtendrá del archivo
+		Extension    string `json:"extension"`                      
 		Id_Folder    int    `json:"id_folder" binding:"required"`
 		Id_Uploader  int    `json:"id_uploader" binding:"required"`
 	}
@@ -122,50 +120,33 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 	// Obtener tamaño del archivo
 	input.Tamano = int(file.Size)
 
-	// 6. Crear estructura de carpetas y guardar archivo
-	baseDir := os.Getenv("FILES_DIR")
-	if baseDir == "" {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Error de configuración",
-			"error":   "FILES_DIR no está configurado",
-		})
-		return
-	}
-
-	// Crear ruta: FILES_DIR/departamento/asunto/
-	folderPath := filepath.Join(baseDir, input.Departamento, input.Asunto)
-	if err := c.createDirectories(folderPath); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Error al crear directorios",
-			"error":   err.Error(),
-		})
-		return
-	}
-
+	// 6. Generar nombre final del archivo usando la función del dominio
 	input.Nombre = application.GenerateFilename(input.Folio, input.Departamento)
-	// 7. Generar nombre final del archivo (puede incluir extensión si no la tiene)
 	finalFileName := input.Nombre
 	if filepath.Ext(finalFileName) == "" && fileExtension != "" {
 		finalFileName += fileExtension
 	}
 
-	// Ruta completa del archivo
-	filePath := filepath.Join(folderPath, finalFileName)
-	
-	// 8. Guardar archivo físico
-	if err := ctx.SaveUploadedFile(file, filePath); err != nil {
+	// 7. Obtener el departamento del usuario desde el middleware
+	userDepartmentInterface, exists := ctx.Get("department")
+	if !exists {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Error al almacenar archivo",
-			"error":   err.Error(),
+			"message": "Error del sistema",
+			"error":   "No se pudo obtener el departamento del usuario",
+		})
+		return
+	}
+	
+	userDepartment, ok := userDepartmentInterface.(string)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Error del sistema",
+			"error":   "Formato de departamento inválido",
 		})
 		return
 	}
 
-	// 9. Crear directorio relativo para la base de datos
-	// Formato: departamento/asunto/archivo.ext
-	relativePath := filepath.Join(input.Departamento, input.Asunto, finalFileName)
-
-	// 10. Crear entidad para la base de datos
+	// 8. Crear entidad para la base de datos
 	fileEntity := entities.Files{
 		Departamento: input.Departamento,
 		Nombre:       finalFileName,
@@ -175,39 +156,24 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		Extension:    input.Extension,
 		Id_Folder:    input.Id_Folder,
 		Id_Uploader:  input.Id_Uploader,
-		Directorio:   relativePath, // Ruta relativa desde FILES_DIR
+		Asunto:       input.Asunto,
 	}
 
-	// 11. Guardar en base de datos
-	if err := c.useCase.Execute(fileEntity); err != nil {
-		// Si falla la BD, eliminar archivo físico
-		os.Remove(filePath)
+	// 9. Ejecutar el caso de uso pasando el departamento del usuario
+	if err := c.useCase.Execute(fileEntity, file, userDepartment); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Error al crear registro en base de datos",
+			"message": "Error al crear archivo",
 			"error":   err.Error(),
 		})
 		return
 	}
 
-	// 12. Respuesta exitosa
 	ctx.JSON(http.StatusCreated, gin.H{
-		"message":     "Archivo creado exitosamente",
+		"message":     "Archivo creado exitosamente en Nextcloud",
 		"filename":    finalFileName,
 		"size":        input.Tamano,
-		"path":        relativePath,
-		"full_path":   filePath,
 		"department":  input.Departamento,
 		"subject":     input.Asunto,
+		"folio":       input.Folio,
 	})
-}
-
-// createDirectories crea los directorios necesarios si no existen
-func (c *CreateFileController) createDirectories(path string) error {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(path, 0755); err != nil {
-			return fmt.Errorf("error al crear directorios: %v", err)
-		}
-		fmt.Printf("Directorios creados: %s\n", path)
-	}
-	return nil
 }

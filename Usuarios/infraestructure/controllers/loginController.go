@@ -35,14 +35,17 @@ func (c *LoginUserController) Execute(ctx *gin.Context) {
 		return
 	}
 
+	// incluye todos
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Login exitoso",
 		"token":   token,
 		"user": gin.H{
-			"id":        user.Id,
-			"nombre":    user.Nombre,
-			"apellidos": user.Apellidos,
-			"email":     user.Email,
+			"userId":     user.Id,
+			"nombre":     user.Nombre,
+			"apellidos":  user.Apellidos,
+			"email":      user.Email,
+			"roleId":     user.Id_Rol,
+			"department": user.Departamento,
 		},
 	})
 }

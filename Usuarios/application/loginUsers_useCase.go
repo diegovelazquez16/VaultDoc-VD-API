@@ -32,7 +32,7 @@ func (lu *LoginUseCase) Execute(email string, password string) (*entities.User, 
 		return nil, "", fmt.Errorf("credenciales inválidas")
 	}
 
-	token, err := lu.jwt.GenerateToken(user.Id)
+	token, err := lu.jwt.GenerateToken(user)
 	if err != nil {
 		return nil, "", fmt.Errorf("error generando token: %w", err)
 	}

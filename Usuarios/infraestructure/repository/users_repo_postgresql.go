@@ -230,3 +230,81 @@ func (r *UserPostgreSQLRepository) UpdateProfile(user entities.User) error {
 	
 	return nil
 }
+
+func (r *UserPostgreSQLRepository) GetProfile(userID int) (*entities.User, error) {
+	query := `
+		SELECT id, nombre, apellidos, email, id_rol, departamento 
+		FROM usuarios 
+		WHERE id = $1`
+	
+	rows := r.db.FetchRows(query, userID)
+	if rows == nil {
+		return nil, fmt.Errorf("error al ejecutar consulta")
+	}
+	defer rows.Close()
+	
+	if !rows.Next() {
+		return nil, fmt.Errorf("perfil de usuario con ID %d no encontrado", userID)
+	}
+	
+	var user entities.User
+	err := rows.Scan(
+		&user.Id,
+		&user.Nombre,
+		&user.Apellidos,
+		&user.Email,
+		&user.Id_Rol,
+		&user.Departamento,
+	)
+	
+	if err != nil {
+		return nil, fmt.Errorf("error al escanear datos del perfil: %w", err)
+	}
+	
+	// No incluir password en la consulta del perfil por seguridad
+	user.Password = ""
+	
+	return &user, nil
+}
+
+func (r *UserPostgreSQLRepository) FindByDepartment(departamento string) ([]entities.User, error) {
+	query := `
+		SELECT id, nombre, apellidos, email, password, id_rol, departamento 
+		FROM usuarios 
+		WHERE departamento = $1
+		ORDER BY id`
+	
+	rows := r.db.FetchRows(query, departamento)
+	if rows == nil {
+		return nil, fmt.Errorf("error al ejecutar consulta")
+	}
+	defer rows.Close()
+	
+	var users []entities.User
+	for rows.Next() {
+		var user entities.User
+		err := rows.Scan(
+			&user.Id,
+			&user.Nombre,
+			&user.Apellidos,
+			&user.Email,
+			&user.Password,
+			&user.Id_Rol,
+			&user.Departamento,
+		)
+		
+		if err != nil {
+			return nil, fmt.Errorf("error al escanear usuario: %w", err)
+		}
+		
+		// Limpiar password para seguridad
+		user.Password = ""
+		users = append(users, user)
+	}
+	
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error en iteración de filas: %w", err)
+	}
+	
+	return users, nil
+}

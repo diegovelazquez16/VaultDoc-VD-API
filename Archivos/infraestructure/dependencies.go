@@ -3,56 +3,50 @@ package infraestructure
 
 import (
 	"VaultDoc-VD/Archivos/application"
+	"VaultDoc-VD/Archivos/infraestructure/adapters"
 	"VaultDoc-VD/Archivos/infraestructure/controllers"
 	"VaultDoc-VD/Archivos/infraestructure/repository"
 	"VaultDoc-VD/Archivos/infraestructure/routes"
+
 	"VaultDoc-VD/core"
 
 	"github.com/gin-gonic/gin"
 )
 
 func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
-	// Inicializar repositories
+	// Inicializar repositories y adaptadores
+	filesStorageService := adapters.NewNextcloudFileAdapter()
+	userService := adapters.NewUserPostgreSQLAdapter(dbPool)
 	filesRepo := repository.NewFilesPostgreSQLRepository(dbPool)
 	changeFileRepo := repository.NewChangeFilePostgreSQLRepository(dbPool)
 	viewFileRepo := repository.NewViewFilePostgreSQLRepository(dbPool)
 
-	// Inicializar use cases - Files CRUD
-	createFileUseCase := application.NewCreateFileUseCase(filesRepo)
+	// Inicializar use cases
+	createFileUseCase := application.NewCreateFileUseCase(filesRepo, filesStorageService, changeFileRepo, viewFileRepo, userService)
 	getFileByIdUseCase := application.NewGetFileByIdUseCase(filesRepo)
 	getAllFilesUseCase := application.NewGetAllFilesUseCase(filesRepo)
-	updateFileUseCase := application.NewUpdateFileUseCase(filesRepo)
-	deleteFileUseCase := application.NewDeleteFileUseCase(filesRepo)
-	downloadFileUseCase := application.NewDownloadFileUseCase()
-
-	// Inicializar use cases - Change Permissions
+	getFilesByFolderUseCase := application.NewGetFilesByFolderUseCase(filesRepo)
+	updateFileUseCase := application.NewUpdateFileUseCase(filesRepo, filesStorageService)
+	deleteFileUseCase := application.NewDeleteFileUseCase(filesRepo, filesStorageService)
+	downloadFileUseCase := application.NewDownloadFileUseCase(filesRepo, filesStorageService)
 	grantChangePermissionUseCase := application.NewGrantChangePermissionUseCase(changeFileRepo)
 	removeChangePermissionUseCase := application.NewRemoveChangePermissionUseCase(changeFileRepo)
-
-	// Inicializar use cases - View Permissions
 	grantViewPermissionUseCase := application.NewGrantViewPermissionUseCase(viewFileRepo)
 	removeViewPermissionUseCase := application.NewRemoveViewPermissionUseCase(viewFileRepo)
-
-	// Inicializar use case - Check Permissions (NUEVO)
 	checkPermissionsUseCase := application.NewCheckPermissionsUseCase(changeFileRepo, viewFileRepo, filesRepo)
 
-	// Inicializar controllers - Files CRUD
+	// Inicializar controllers
 	createFileController := controllers.NewCreateFileController(createFileUseCase)
 	getFileByIdController := controllers.NewGetFileByIdController(getFileByIdUseCase)
 	getAllFilesController := controllers.NewGetAllFilesController(getAllFilesUseCase)
+	getFilesByFolderController := controllers.NewGetFilesByFolderController(getFilesByFolderUseCase)
 	updateFileController := controllers.NewUpdateFileController(updateFileUseCase)
 	deleteFileController := controllers.NewDeleteFileController(deleteFileUseCase)
 	downloadFileController := controllers.NewDownloadFileController(downloadFileUseCase)
-
-	// Inicializar controllers - Change Permissions
 	grantChangePermissionController := controllers.NewGrantChangePermissionController(grantChangePermissionUseCase)
 	removeChangePermissionController := controllers.NewRemoveChangePermissionController(removeChangePermissionUseCase)
-
-	// Inicializar controllers - View Permissions
 	grantViewPermissionController := controllers.NewGrantViewPermissionController(grantViewPermissionUseCase)
 	removeViewPermissionController := controllers.NewRemoveViewPermissionController(removeViewPermissionUseCase)
-
-	// Inicializar controller - Check Permissions (NUEVO)
 	checkPermissionsController := controllers.NewCheckPermissionsController(checkPermissionsUseCase)
 
 	// Configurar rutas
@@ -61,6 +55,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 		createFileController,
 		getFileByIdController,
 		getAllFilesController,
+		getFilesByFolderController,
 		updateFileController,
 		deleteFileController,
 		downloadFileController,

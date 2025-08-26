@@ -29,8 +29,8 @@ func main() {
 	infrastructure.SetupDependenciesFolders(r, dbPool)
 	historyInfra.SetupDependencies(r, dbPool)
 
-	log.Println("Servidor iniciado en puerto 8080")
-	if err := r.Run(":8080"); err != nil {
+	log.Println("Servidor iniciado en puerto 8081")
+	if err := r.Run(":8081"); err != nil {
 		log.Fatalf("Error al iniciar el servidor: %v", err)
 	}
 }
