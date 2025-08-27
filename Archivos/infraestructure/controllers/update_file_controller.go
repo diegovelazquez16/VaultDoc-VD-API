@@ -74,7 +74,6 @@ func (c *UpdateFileController) Execute(ctx *gin.Context) {
 	// 4. Parsear el JSON
 	var input struct {
 		Departamento string `json:"departamento"`
-		Asunto       string `json:"asunto"`
 		Nombre       string `json:"nombre"`
 		Tamano       int    `json:"tamano"`
 		Fecha        string `json:"fecha"`
@@ -134,7 +133,6 @@ func (c *UpdateFileController) Execute(ctx *gin.Context) {
 		"message":    "Archivo actualizado exitosamente",
 		"id":         id,
 		"department": input.Departamento,
-		"subject":    input.Asunto,
 	}
 
 	if hasNewFile {
