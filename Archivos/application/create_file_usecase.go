@@ -7,6 +7,8 @@ import (
 	entities "VaultDoc-VD/Archivos/domain/entities"
 	"VaultDoc-VD/Archivos/domain/repository"
 	"VaultDoc-VD/Archivos/domain/services"
+	folderEntities "VaultDoc-VD/Carpetas/domain/entities"
+	folderRepository "VaultDoc-VD/Carpetas/domain/repository"
 )
 
 type CreateFileUseCase struct {
@@ -15,6 +17,7 @@ type CreateFileUseCase struct {
 	changeFileRepo          repository.ChangeFileRepository
 	viewFileRepo           repository.ViewFileRepository
 	userService            services.UserService
+	folderRepo             folderRepository.FoldersRepository 
 }
 
 func NewCreateFileUseCase(
@@ -23,6 +26,7 @@ func NewCreateFileUseCase(
 	changeFileRepo repository.ChangeFileRepository,
 	viewFileRepo repository.ViewFileRepository,
 	userService services.UserService,
+	folderRepo folderRepository.FoldersRepository, 
 ) *CreateFileUseCase {
 	return &CreateFileUseCase{
 		repo:                    repo,
@@ -30,8 +34,10 @@ func NewCreateFileUseCase(
 		changeFileRepo:          changeFileRepo,
 		viewFileRepo:           viewFileRepo,
 		userService:            userService,
+		folderRepo:             folderRepo,
 	}
 }
+
 
 func (uc *CreateFileUseCase) Execute(file entities.Files, fileHeader *multipart.FileHeader, userDepartment string) error {
 	
@@ -39,36 +45,56 @@ func (uc *CreateFileUseCase) Execute(file entities.Files, fileHeader *multipart.
 		return fmt.Errorf("validación fallida: %v", err)
 	}
 
-	// Construir la ruta de la carpeta (departamento solamente, sin asunto)
-	folderPath := file.Departamento
+	
+	// Como no existe GetByID, buscar por departamento y filtrar por ID
+	folders, err := uc.folderRepo.GetFoldersByDepartament(userDepartment)
+	if err != nil {
+		return fmt.Errorf("error al obtener carpetas del departamento: %v", err)
+	}
+
+	var targetFolder *folderEntities.Folders
+	for _, folder := range folders {
+		if folder.Id == file.Id_Folder {
+			targetFolder = &folder
+			break
+		}
+	}
+
+	if targetFolder == nil {
+		return fmt.Errorf("carpeta con ID %d no encontrada en el departamento %s", file.Id_Folder, userDepartment)
+	}
+
+	// Construir la ruta completa: departamento/nombre_carpeta
+	folderPath := userDepartment + "/" + targetFolder.Name
 
 	// Verificar que el archivo no existe ya en Nextcloud
 	exists, err := uc.fileStorageService.FileExists(folderPath, file.Nombre)
 	if err != nil {
 		fmt.Printf("Warning: No se pudo verificar archivo en Nextcloud: %v\n", err)
 	} else if exists {
-		return fmt.Errorf("el archivo %s ya existe en Nextcloud", file.Nombre)
+		return fmt.Errorf("el archivo %s ya existe en Nextcloud en el directorio %s", file.Nombre, folderPath)
 	}
 
-	// Subir archivo a Nextcloud
+	
 	relativePath, err := uc.fileStorageService.UploadFile(folderPath, file.Nombre, fileHeader)
 	if err != nil {
-		return fmt.Errorf("error al subir archivo a Nextcloud: %v", err)
+		return fmt.Errorf("error al subir archivo a Nextcloud en directorio %s: %v", folderPath, err)
 	}
 
-	// Actualizar el directorio en la entidad con la ruta de Nextcloud
+	
 	file.Directorio = relativePath
 
 	// Crear el registro en la base de datos
 	if err := uc.repo.Create(file); err != nil {
+		
 		deleteErr := uc.fileStorageService.DeleteFile(folderPath, file.Nombre)
 		if deleteErr != nil {
-			fmt.Printf("Error al revertir subida de archivo: %v\n", deleteErr)
+			fmt.Printf("Error al revertir subida de archivo de directorio %s: %v\n", folderPath, deleteErr)
 		}
 		return fmt.Errorf("error al crear archivo en base de datos: %v", err)
 	}
 
-	// Obtener el ID del archivo recién creado
+	
 	createdFile, err := uc.repo.GetByFolio(file.Folio)
 	if err != nil {
 		fmt.Printf("Warning: No se pudo obtener ID del archivo creado para otorgar permisos: %v\n", err)
@@ -81,7 +107,7 @@ func (uc *CreateFileUseCase) Execute(file entities.Files, fileHeader *multipart.
 		// No retornamos error porque el archivo se creó correctamente
 	}
 
-	fmt.Printf("Archivo creado exitosamente: %s en %s\n", file.Nombre, relativePath)
+	fmt.Printf("Archivo creado exitosamente: %s en directorio %s (ruta completa: %s)\n", file.Nombre, folderPath, relativePath)
 	return nil
 }
 

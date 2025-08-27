@@ -73,12 +73,12 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 	if input.Folio == "" || input.Id_Folder == 0 || input.Id_Uploader == 0 {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"message": "Campos requeridos faltantes",
-			"error":   "nombre, folio, id_folder, id_uploader son requeridos",
+			"error":   "folio, id_folder, id_uploader son requeridos",
 		})
 		return
 	}
 
-	// 5. Obtener el departamento del usuario desde el middleware JWT
+	// 5. Obtener el departamento del usuario desde el middleware JWT (ADAPTACIÓN)
 	userDepartmentInterface, exists := ctx.Get("department")
 	if !exists {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -112,7 +112,7 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		return
 	}
 
-	// 6. Validar que el departamento del usuario esté en los valores permitidos del ENUM
+	// 6. Validar que el departamento esté en los valores permitidos del ENUM
 	validDepartments := []string{
 		"Dirección General", 
 		"Área Técnica", 
@@ -131,7 +131,7 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 	
 	isValidDepartment := false
 	for _, dept := range validDepartments {
-		if userDepartment == dept {
+		if userDepartment == dept { 
 			isValidDepartment = true
 			break
 		}
@@ -160,13 +160,15 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 	input.Tamano = int(file.Size)
 
 	// 8. Generar nombre final del archivo usando la función del dominio
+	
 	input.Nombre = application.GenerateFilename(input.Folio, userDepartment)
 	finalFileName := input.Nombre
 	if filepath.Ext(finalFileName) == "" && fileExtension != "" {
 		finalFileName += fileExtension
 	}
 
-	// 9. Crear entidad para la base de datos usando el departamento del JWT
+	// 9. Crear entidad para la base de datos
+	
 	fileEntity := entities.Files{
 		Departamento: userDepartment, // Usar departamento del JWT
 		Nombre:       finalFileName,
@@ -178,7 +180,7 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		Id_Uploader:  input.Id_Uploader,
 	}
 
-	// 10. Ejecutar el caso de uso pasando el departamento del usuario
+	// 10. ADAPTACIÓN: Pasar userDepartment al caso de uso para determinar el directorio
 	if err := c.useCase.Execute(fileEntity, file, userDepartment); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Error al crear archivo",
@@ -216,7 +218,7 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		"message":     "Archivo creado exitosamente en Nextcloud",
 		"filename":    finalFileName,
 		"size":        input.Tamano,
-		"department":  userDepartment,
+		"department":  userDepartment, 
 		"folio":       input.Folio,
 	})
 }

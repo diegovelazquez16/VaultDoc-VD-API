@@ -9,6 +9,7 @@ import (
 	"VaultDoc-VD/Archivos/infraestructure/repository"
 	historyRepository "VaultDoc-VD/Historial/infrastructure/repository"
 	"VaultDoc-VD/Archivos/infraestructure/routes"
+	folderRepository "VaultDoc-VD/Carpetas/infrastructure/repository"
 
 	"VaultDoc-VD/core"
 
@@ -23,9 +24,10 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	changeFileRepo := repository.NewChangeFilePostgreSQLRepository(dbPool)
 	viewFileRepo := repository.NewViewFilePostgreSQLRepository(dbPool)
 	historyRepo := historyRepository.NewHistoryPostgreSQLRepository(dbPool)
+	folderRepo := folderRepository.NewFoldersPostgreSQLRepository(dbPool)
 
 	// Inicializar use cases
-	createFileUseCase := application.NewCreateFileUseCase(filesRepo, filesStorageService, changeFileRepo, viewFileRepo, userService)
+	createFileUseCase := application.NewCreateFileUseCase(filesRepo, filesStorageService, changeFileRepo, viewFileRepo, userService, folderRepo)
 	getFileByIdUseCase := application.NewGetFileByIdUseCase(filesRepo)
 	getAllFilesUseCase := application.NewGetAllFilesUseCase(filesRepo)
 	getFilesByFolderUseCase := application.NewGetFilesByFolderUseCase(filesRepo)
