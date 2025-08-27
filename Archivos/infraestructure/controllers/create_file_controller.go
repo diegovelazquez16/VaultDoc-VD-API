@@ -52,9 +52,7 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 
 	// 3. Parsear el JSON
 	var input struct {
-		Departamento string `json:"departamento" binding:"required"`
-		Asunto       string `json:"asunto" binding:"required"`       
-		Nombre       string `json:"nombre" binding:"required"`       
+		Nombre       string `json:"nombre"`       
 		Tamano       int    `json:"tamano"`                         
 		Fecha        string `json:"fecha"`                         
 		Folio        string `json:"folio" binding:"required"`
@@ -71,17 +69,50 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		return
 	}
 
-	// 4. Validar campos requeridos y ENUM departamento
-	if input.Departamento == "" || input.Asunto == "" || input.Nombre == "" || 
-	   input.Folio == "" || input.Id_Folder == 0 || input.Id_Uploader == 0 {
+	// 4. Validar campos requeridos
+	if input.Folio == "" || input.Id_Folder == 0 || input.Id_Uploader == 0 {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"message": "Campos requeridos faltantes",
-			"error":   "departamento, asunto, nombre, folio, id_folder, id_uploader son requeridos",
+			"error":   "folio, id_folder, id_uploader son requeridos",
 		})
 		return
 	}
 
-	// Validar que el departamento esté en los valores permitidos del ENUM
+	// 5. Obtener el departamento del usuario desde el middleware JWT (ADAPTACIÓN)
+	userDepartmentInterface, exists := ctx.Get("department")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Error del sistema",
+			"error":   "No se pudo obtener el departamento del usuario del token",
+		})
+		return
+	}
+	
+	// Convertir correctamente el valor del JWT claim a string
+	var userDepartment string
+	switch v := userDepartmentInterface.(type) {
+	case string:
+		userDepartment = v
+	case interface{}:
+		// Los JWT claims pueden venir como interface{}, intentar conversión
+		if str, ok := v.(string); ok {
+			userDepartment = str
+		} else {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Error del sistema",
+				"error":   "Formato de departamento inválido en el token",
+			})
+			return
+		}
+	default:
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Error del sistema",
+			"error":   "Tipo de departamento no reconocido en el token",
+		})
+		return
+	}
+
+	// 6. Validar que el departamento esté en los valores permitidos del ENUM
 	validDepartments := []string{
 		"Dirección General", 
 		"Área Técnica", 
@@ -100,7 +131,7 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 	
 	isValidDepartment := false
 	for _, dept := range validDepartments {
-		if input.Departamento == dept {
+		if userDepartment == dept { 
 			isValidDepartment = true
 			break
 		}
@@ -109,12 +140,12 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 	if !isValidDepartment {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"message": "Departamento no válido",
-			"error":   fmt.Sprintf("El departamento '%s' no está permitido. Valores válidos: %v", input.Departamento, validDepartments),
+			"error":   fmt.Sprintf("El departamento del usuario '%s' no está permitido", userDepartment),
 		})
 		return
 	}
 
-	// 5. Obtener información automática del archivo
+	// 7. Obtener información automática del archivo
 	if input.Fecha == "" {
 		input.Fecha = time.Now().Format("2006-01-02 15:04:05")
 	}
@@ -128,35 +159,18 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 	// Obtener tamaño del archivo
 	input.Tamano = int(file.Size)
 
-	// 6. Generar nombre final del archivo usando la función del dominio
-	input.Nombre = application.GenerateFilename(input.Folio, input.Departamento)
+	// 8. Generar nombre final del archivo usando la función del dominio
+	
+	input.Nombre = application.GenerateFilename(input.Folio, userDepartment)
 	finalFileName := input.Nombre
 	if filepath.Ext(finalFileName) == "" && fileExtension != "" {
 		finalFileName += fileExtension
 	}
 
-	// 7. Obtener el departamento del usuario desde el middleware
-	userDepartmentInterface, exists := ctx.Get("department")
-	if !exists {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Error del sistema",
-			"error":   "No se pudo obtener el departamento del usuario",
-		})
-		return
-	}
+	// 9. Crear entidad para la base de datos
 	
-	userDepartment, ok := userDepartmentInterface.(string)
-	if !ok {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Error del sistema",
-			"error":   "Formato de departamento inválido",
-		})
-		return
-	}
-
-	// 8. Crear entidad para la base de datos
 	fileEntity := entities.Files{
-		Departamento: input.Departamento,
+		Departamento: userDepartment, // Usar departamento del JWT
 		Nombre:       finalFileName,
 		Tamano:       input.Tamano,
 		Fecha:        input.Fecha,
@@ -164,10 +178,9 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		Extension:    input.Extension,
 		Id_Folder:    input.Id_Folder,
 		Id_Uploader:  input.Id_Uploader,
-		Asunto:       input.Asunto,
 	}
 
-	// 9. Ejecutar el caso de uso pasando el departamento del usuario
+	// 10. ADAPTACIÓN: Pasar userDepartment al caso de uso para determinar el directorio
 	if err := c.useCase.Execute(fileEntity, file, userDepartment); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Error al crear archivo",
@@ -176,7 +189,7 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		return
 	}
 
-	newFile, err := c.ucGetbyName.Execute(input.Nombre)
+	newFile, err := c.ucGetbyName.Execute(input.Nombre + input.Extension)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{
 			"message": "Archivo no encontrado",
@@ -185,13 +198,12 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		return
 	}
 
-
 	var record historyEntities.ReceiveHistory
-	record.Departamento = input.Departamento
+	record.Departamento = userDepartment
 	record.Id_user = input.Id_Uploader
 	record.Id_folder = input.Id_Folder
 	record.Id_file = newFile.Id
-	record.Movimiento = "Subió archivoo"
+	record.Movimiento = "Subió archivo"
 
 	err = c.historyUseCase.Execute(record)
 	if err != nil {
@@ -206,8 +218,7 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		"message":     "Archivo creado exitosamente en Nextcloud",
 		"filename":    finalFileName,
 		"size":        input.Tamano,
-		"department":  input.Departamento,
-		"subject":     input.Asunto,
+		"department":  userDepartment, 
 		"folio":       input.Folio,
 	})
 }

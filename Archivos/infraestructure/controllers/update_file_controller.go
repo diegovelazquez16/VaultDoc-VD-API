@@ -112,7 +112,6 @@ func (c *UpdateFileController) Execute(ctx *gin.Context) {
 		Extension:    input.Extension,
 		Id_Folder:    input.Id_Folder,
 		Id_Uploader:  input.Id_Uploader,
-		Asunto:       input.Asunto, 
 	}
 
 

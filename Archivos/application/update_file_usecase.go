@@ -25,7 +25,7 @@ func (uc *UpdateFileUseCase) Execute(file entities.Files, fileHeader *multipart.
 	// Si se proporciona un nuevo archivo, actualizarlo en Nextcloud
 	if fileHeader != nil {
 		// Construir la ruta de la carpeta
-		folderPath := fmt.Sprintf("%s/%s", file.Departamento, file.Asunto) 
+		folderPath := fmt.Sprintf("%s/", file.Departamento) 
 
 		// Subir el nuevo archivo a Nextcloud (esto sobrescribirá el existente)
 		relativePath, err := uc.fileStorageService.UploadFile(folderPath, file.Nombre, fileHeader)
