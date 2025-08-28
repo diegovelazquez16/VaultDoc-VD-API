@@ -78,7 +78,7 @@ func (c *CreateFileController) Execute(ctx *gin.Context) {
 		return
 	}
 
-	// 5. Obtener el departamento del usuario desde el middleware JWT (ADAPTACIÓN)
+	// 5. Obtener el departamento del usuario desde el middleware JWT
 	userDepartmentInterface, exists := ctx.Get("department")
 	if !exists {
 		ctx.JSON(http.StatusInternalServerError, gin.H{

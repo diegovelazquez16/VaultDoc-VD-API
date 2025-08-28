@@ -7,6 +7,7 @@ import (
 
 type FileStorageService interface {
 	UploadFile(folderPath string, fileName string, fileHeader *multipart.FileHeader) (string, error)
+	UploadFileFromBytes(folderPath string, fileName string, fileContent []byte) (string, error)
 	DownloadFile(folderPath string, fileName string) ([]byte, error)
 	DeleteFile(folderPath string, fileName string) error
 	FileExists(folderPath string, fileName string) (bool, error)
