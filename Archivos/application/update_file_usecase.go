@@ -32,12 +32,10 @@ func (uc *UpdateFileUseCase) Execute(file entities.Files, fileHeader *multipart.
 		if err != nil {
 			return fmt.Errorf("error al actualizar archivo en Nextcloud: %v", err)
 		}
-
 		
 		file.Directorio = relativePath
 		fmt.Printf("Archivo actualizado en Nextcloud: %s\n", relativePath)
 	}
-
 	
 	if err := uc.repo.Update(file); err != nil {
 		return fmt.Errorf("error al actualizar archivo en base de datos: %v", err)
