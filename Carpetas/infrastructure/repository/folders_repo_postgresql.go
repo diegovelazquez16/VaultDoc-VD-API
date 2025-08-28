@@ -169,3 +169,33 @@ func (r *FoldersPostgreSQLRepository) GetFoldersByDepartamentComplete(department
 
 	return folders, nil
 }
+
+func (r *FoldersPostgreSQLRepository) GetFoldersByMyDepartament(department string) ([]entities.Folders, error) {
+	
+	rows := r.db.FetchRows("SELECT id, name, departamento, id_uploader FROM folders WHERE departamento = $1", department)
+	if rows == nil {
+		return nil, fmt.Errorf("Error al ejecutar consulta")
+	}
+	defer rows.Close()
+
+	var folders []entities.Folders
+	for rows.Next() {
+		var folder entities.Folders
+		err := rows.Scan(
+			&folder.Id,
+			&folder.Name,
+			&folder.Departamento,
+			&folder.Id_uploader,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error al escanear folder: %w", err)
+		}
+		folders = append(folders, folder)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error en iteración de filas: %w", err)
+	}
+
+	return folders, nil
+}

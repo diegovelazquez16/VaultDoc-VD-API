@@ -9,4 +9,5 @@ type FoldersRepository interface {
 	GetFoldersByDepartamentComplete(department string) ([]entities.Folders, error)
 	GetFolderByFullName(name string) ([]entities.Folders, error)
 	GetFolderByName(name string) ([]entities.Folders, error)
+	GetFoldersByMyDepartament(departament string) ([]entities.Folders, error)
 }

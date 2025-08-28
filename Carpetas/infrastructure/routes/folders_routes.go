@@ -12,6 +12,7 @@ func SetUpFoldersRoutes(
 	r *gin.Engine, createFolderController *controllers.CreateFolderController,
 	getFoldersByDepartamentController *controllers.GetFoldersByDepartamentController,
 	getFolderByNameController *controllers.GetFolderByNameController,
+	getFolderByMyDepartamentController *controllers.GetFolderByMyDepartamentController,
 	){
 
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -23,5 +24,6 @@ func SetUpFoldersRoutes(
 		// cualquier usuario autenticado
 		g.GET("/:departament", getFoldersByDepartamentController.Execute)
 		g.GET("/n/:folder", service.AuthMiddleware(jwtSecret), getFolderByNameController.Execute)
+		g.GET("/", service.AuthMiddleware(jwtSecret), getFolderByMyDepartamentController.Execute)
 	}
 }
