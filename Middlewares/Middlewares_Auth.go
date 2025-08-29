@@ -4,7 +4,6 @@ package service
 import (
 	"net/http"
 	"strings"
-
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -16,35 +15,43 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			return
 		}
-
+		
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		if tokenString == authHeader {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Bearer token not found"})
 			return
 		}
-
+		
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
 			return []byte(jwtSecret), nil
 		})
-
+		
 		if err != nil || !token.Valid {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
-
+		
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
 			return
 		}
-
+		
+		// Convertir los claims a los tipos correctos antes de almacenarlos
 		c.Set("userID", claims["userId"])
 		c.Set("email", claims["email"])
 		c.Set("roleID", claims["roleId"])
-		c.Set("department", claims["department"])
+		
+		// Asegurar que department se almacene como string
+		if dept, exists := claims["department"]; exists {
+			c.Set("department", dept)
+		} else {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Department not found in token"})
+			return
+		}
 		
 		c.Next()
 	}

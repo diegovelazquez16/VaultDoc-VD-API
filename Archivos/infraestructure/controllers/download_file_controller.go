@@ -2,18 +2,27 @@
 package controllers
 
 import (
+	"VaultDoc-VD/Archivos/application"
+	history "VaultDoc-VD/Historial/application"
+	"VaultDoc-VD/Historial/domain/entities"
 	"net/http"
 	"strconv"
-	"VaultDoc-VD/Archivos/application"
+
 	"github.com/gin-gonic/gin"
 )
 
 type DownloadFileController struct {
 	useCase *application.DownloadFileUseCase
+	historyUseCase *history.SaveActionUseCase
+	uc * application.GetFileByIdUseCase
 }
 
-func NewDownloadFileController(useCase *application.DownloadFileUseCase) *DownloadFileController {
-	return &DownloadFileController{useCase: useCase}
+func NewDownloadFileController(
+	useCase *application.DownloadFileUseCase,
+	historyUseCase *history.SaveActionUseCase,
+	uc * application.GetFileByIdUseCase,
+	) *DownloadFileController {
+	return &DownloadFileController{useCase: useCase, historyUseCase: historyUseCase, uc: uc}
 }
 
 func (c *DownloadFileController) Execute(ctx *gin.Context) {
@@ -23,6 +32,14 @@ func (c *DownloadFileController) Execute(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"message": "ID del archivo requerido",
 			"error":   "Especifica el ID del archivo a descargar",
+		})
+		return
+	}
+
+	idUser := ctx.Param("id_user")
+	if idUser == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "ID del usuario requerido",
 		})
 		return
 	}
@@ -37,12 +54,46 @@ func (c *DownloadFileController) Execute(ctx *gin.Context) {
 		return
 	}
 
+	id_user, err := strconv.Atoi(idUser)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "ID inválido",
+			"error":   "El ID debe ser un número entero válido",
+		})
+		return
+	}
+
 	// 3. Ejecutar caso de uso para descargar desde Nextcloud
 	content, fileName, err := c.useCase.Execute(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{
 			"message": "Archivo no encontrado",
 			"error":   err.Error(),
+		})
+		return
+	}
+
+	file, err := c.uc.Execute(id)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"message": "Archivo no encontrado",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	var record entities.ReceiveHistory
+	record.Departamento = file.Departamento
+	record.Id_user = id_user
+	record.Id_folder = file.Id_Folder
+	record.Id_file = file.Id
+	record.Movimiento = "Bajó archivo"
+
+	err = c.historyUseCase.Execute(record)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Error interno al crear registro en el historial",
+			"details": err.Error(),
 		})
 		return
 	}

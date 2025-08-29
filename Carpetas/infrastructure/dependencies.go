@@ -1,4 +1,4 @@
-//Carpetas/infraestructure/dependencies.go
+// Carpetas/infraestructure/dependencies.go
 package infrastructure
 
 import (
@@ -19,10 +19,12 @@ func SetupDependenciesFolders(r *gin.Engine, dbPool *core.Conn_PostgreSQL){
 	createFolderUseCase := application.NewCreateFolderUseCase(folderRepo, nextcloudAdapter)
 	getFoldersByDepartamentUseCase := application.NewGetFoldersByDepartamentUseCase(folderRepo, nextcloudAdapter)
 	getFolderByNameUseCase := application.NewGetFolderByName(folderRepo, nextcloudAdapter)
+	getFoldersByMyDepartamentUseCase := application.NewGetFoldersByMyDepartamentUseCase(folderRepo, nextcloudAdapter)
 
 	createFolderController := controllers.NewCreateFolderController(createFolderUseCase)
 	getFoldersByDepartamentController := controllers.NewGetFoldersByDepartamentController(getFoldersByDepartamentUseCase)
 	getFolderByNameController := controllers.NewGetFolderByName(getFolderByNameUseCase)
+	getFoldersByMyDepartamentController := controllers.NewGetFoldersByMyDepartamentController(getFoldersByMyDepartamentUseCase)
 
-	routes.SetUpFoldersRoutes(r, createFolderController, getFoldersByDepartamentController, getFolderByNameController)
+	routes.SetUpFoldersRoutes(r, createFolderController, getFoldersByDepartamentController, getFolderByNameController, getFoldersByMyDepartamentController)
 }

@@ -12,6 +12,7 @@ func SetUpFoldersRoutes(
 	r *gin.Engine, createFolderController *controllers.CreateFolderController,
 	getFoldersByDepartamentController *controllers.GetFoldersByDepartamentController,
 	getFolderByNameController *controllers.GetFolderByNameController,
+	getFolderByMyDepartamentController *controllers.GetFolderByMyDepartamentController,
 	){
 
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -19,9 +20,10 @@ func SetUpFoldersRoutes(
 	g := r.Group("folders")
 	{
 		// solo el jefe de departamento:
-		g.POST("/", service.BossMiddleware(jwtSecret), createFolderController.Execute)
+		g.POST("/", service.AuthMiddleware(jwtSecret), createFolderController.Execute)
 		// cualquier usuario autenticado
-		g.GET("/:departament", service.AuthMiddleware(jwtSecret), getFoldersByDepartamentController.Execute)
+		g.GET("/:departament", getFoldersByDepartamentController.Execute)
 		g.GET("/n/:folder", service.AuthMiddleware(jwtSecret), getFolderByNameController.Execute)
+		g.GET("/", service.AuthMiddleware(jwtSecret), getFolderByMyDepartamentController.Execute)
 	}
 }

@@ -18,8 +18,8 @@ func NewFilesPostgreSQLRepository(db *core.Conn_PostgreSQL) *FilesPostgreSQLRepo
 }
 
 func (r *FilesPostgreSQLRepository) Create(file entities.Files) error {
-	query := `INSERT INTO files (departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio, asunto) 
-			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+	query := `INSERT INTO files (departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio) 
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 	
 	_, err := r.db.DB.Exec(query, 
 		file.Departamento, 
@@ -31,7 +31,6 @@ func (r *FilesPostgreSQLRepository) Create(file entities.Files) error {
 		file.Id_Folder, 
 		file.Id_Uploader,
 		file.Directorio,
-		file.Asunto,
 	)
 	
 	if err != nil {
@@ -43,7 +42,7 @@ func (r *FilesPostgreSQLRepository) Create(file entities.Files) error {
 
 func (r *FilesPostgreSQLRepository) GetByID(id int) (entities.Files, error) {
 	var file entities.Files
-	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio, asunto 
+	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio 
 			  FROM files WHERE id = $1`
 	
 	row := r.db.DB.QueryRow(query, id)
@@ -58,7 +57,6 @@ func (r *FilesPostgreSQLRepository) GetByID(id int) (entities.Files, error) {
 		&file.Id_Folder,
 		&file.Id_Uploader,
 		&file.Directorio,
-		&file.Asunto,
 	)
 	
 	if err != nil {
@@ -73,7 +71,7 @@ func (r *FilesPostgreSQLRepository) GetByID(id int) (entities.Files, error) {
 
 func (r *FilesPostgreSQLRepository) GetByFolio(folio string) (entities.Files, error) {
 	var file entities.Files
-	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio, asunto 
+	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio 
 			  FROM files WHERE folio = $1`
 	
 	row := r.db.DB.QueryRow(query, folio)
@@ -88,12 +86,40 @@ func (r *FilesPostgreSQLRepository) GetByFolio(folio string) (entities.Files, er
 		&file.Id_Folder,
 		&file.Id_Uploader,
 		&file.Directorio,
-		&file.Asunto,
 	)
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return file, fmt.Errorf("archivo con folio %s no encontrado", folio)
+		}
+		return file, fmt.Errorf("error al obtener archivo: %v", err)
+	}
+	
+	return file, nil
+}
+
+func (r *FilesPostgreSQLRepository) GetByName(name string) (entities.Files, error) {
+	var file entities.Files
+	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio 
+			  FROM files WHERE nombre = $1`
+	
+	row := r.db.DB.QueryRow(query, name)
+	err := row.Scan(
+		&file.Id,
+		&file.Departamento,
+		&file.Nombre,
+		&file.Tamano,
+		&file.Fecha,
+		&file.Folio,
+		&file.Extension,
+		&file.Id_Folder,
+		&file.Id_Uploader,
+		&file.Directorio,
+	)
+	
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return file, fmt.Errorf("archivo con nombre %s no encontrado", name)
 		}
 		return file, fmt.Errorf("error al obtener archivo: %v", err)
 	}
@@ -111,8 +137,7 @@ func (r *FilesPostgreSQLRepository) Update(file entities.Files) error {
 			  extension = $7, 
 			  id_folder = $8, 
 			  id_uploader = $9,
-			  directorio = $10,
-			  asunto = $11 
+			  directorio = $10 
 			  WHERE id = $1`
 	
 	result, err := r.db.DB.Exec(query,
@@ -126,7 +151,6 @@ func (r *FilesPostgreSQLRepository) Update(file entities.Files) error {
 		file.Id_Folder,
 		file.Id_Uploader,
 		file.Directorio,
-		file.Asunto,
 	)
 	
 	if err != nil {
@@ -169,7 +193,7 @@ func (r *FilesPostgreSQLRepository) Delete(id int) error {
 
 func (r *FilesPostgreSQLRepository) GetAll() ([]entities.Files, error) {
 	var files []entities.Files
-	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio, asunto 
+	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio 
 			  FROM files ORDER BY id ASC`
 	
 	rows, err := r.db.DB.Query(query)
@@ -191,7 +215,6 @@ func (r *FilesPostgreSQLRepository) GetAll() ([]entities.Files, error) {
 			&file.Id_Folder,
 			&file.Id_Uploader,
 			&file.Directorio,
-			&file.Asunto,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error al escanear archivo: %v", err)
@@ -210,7 +233,7 @@ func (r *FilesPostgreSQLRepository) GetAll() ([]entities.Files, error) {
 // GetByDirectorio obtiene archivos por su directorio
 func (r *FilesPostgreSQLRepository) GetByDirectorio(directorio string) ([]entities.Files, error) {
 	var files []entities.Files
-	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio, asunto 
+	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio 
 			  FROM files WHERE directorio LIKE $1 ORDER BY id ASC`
 	
 	rows, err := r.db.DB.Query(query, "%"+directorio+"%")
@@ -232,7 +255,6 @@ func (r *FilesPostgreSQLRepository) GetByDirectorio(directorio string) ([]entiti
 			&file.Id_Folder,
 			&file.Id_Uploader,
 			&file.Directorio,
-			&file.Asunto,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error al escanear archivo: %v", err)
@@ -245,7 +267,7 @@ func (r *FilesPostgreSQLRepository) GetByDirectorio(directorio string) ([]entiti
 
 func (r *FilesPostgreSQLRepository) GetByFolder(folderId int) ([]entities.Files, error) {
 	var files []entities.Files
-	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio, asunto 
+	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio 
 			  FROM files WHERE id_folder = $1 ORDER BY id ASC`
 	
 	rows, err := r.db.DB.Query(query, folderId)
@@ -267,7 +289,6 @@ func (r *FilesPostgreSQLRepository) GetByFolder(folderId int) ([]entities.Files,
 			&file.Id_Folder,
 			&file.Id_Uploader,
 			&file.Directorio,
-			&file.Asunto,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error al escanear archivo: %v", err)

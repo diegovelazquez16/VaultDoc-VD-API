@@ -307,3 +307,40 @@ func (nf *NextcloudFileAdapter) parseFileInfoResponse(xmlData []byte, fileName s
 
 	return fileInfo, nil
 }
+
+func (nf *NextcloudFileAdapter) UploadFileFromBytes(folderPath string, fileName string, fileContent []byte) (string, error) {
+	// Validar parámetros de entrada
+	if fileName == "" {
+		return "", fmt.Errorf("nombre de archivo no puede estar vacío")
+	}
+	if fileContent == nil {
+		return "", fmt.Errorf("contenido del archivo no puede ser nil")
+	}
+
+	// Construir la URL de destino
+	fileURL := nf.buildFileURL(folderPath, fileName)
+
+	// Crear request PUT para subir el archivo
+	req, err := http.NewRequest("PUT", fileURL, bytes.NewReader(fileContent))
+	if err != nil {
+		return "", fmt.Errorf("error al crear request: %w", err)
+	}
+
+	req.SetBasicAuth(nf.client.Username, nf.client.Password)
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Content-Length", strconv.Itoa(len(fileContent)))
+
+	resp, err := nf.client.Client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("error al subir archivo: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("error al subir archivo a Nextcloud (status: %d): %s", resp.StatusCode, string(body))
+	}
+
+	cleanFolderPath := strings.Trim(folderPath, "/")
+	return path.Join(cleanFolderPath, fileName), nil
+}
