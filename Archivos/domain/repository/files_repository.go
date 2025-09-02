@@ -10,6 +10,7 @@ type FilesRepository interface {
 	GetByID(id int) (entities.Files, error)
 	GetByFolio(folio string) (entities.Files, error)
 	GetByName(name string) (entities.Files, error)
+	SearchFile(name string) ([]entities.Files, error)
 	Update(file entities.Files) error
 	Delete(id int) error
 	GetAll() ([]entities.Files, error)
