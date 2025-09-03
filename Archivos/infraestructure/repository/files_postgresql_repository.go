@@ -127,6 +127,40 @@ func (r *FilesPostgreSQLRepository) GetByName(name string) (entities.Files, erro
 	return file, nil
 }
 
+func (r *FilesPostgreSQLRepository) SearchFile(name string) ([]entities.Files, error) {
+	var files []entities.Files
+	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio 
+			  FROM files WHERE nombre ILIKE %$1% ORDER BY id ASC`
+	
+	rows, err := r.db.DB.Query(query, name)
+	if err != nil {
+		return nil, fmt.Errorf("error al obtener archivos: %v", err)
+	}
+	defer rows.Close()
+	
+	for rows.Next() {
+		var file entities.Files
+		err := rows.Scan(
+			&file.Id,
+			&file.Departamento,
+			&file.Nombre,
+			&file.Tamano,
+			&file.Fecha,
+			&file.Folio,
+			&file.Extension,
+			&file.Id_Folder,
+			&file.Id_Uploader,
+			&file.Directorio,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error al escanear archivo: %v", err)
+		}
+		files = append(files, file)
+	}
+
+	return files, err
+}
+
 func (r *FilesPostgreSQLRepository) Update(file entities.Files) error {
 	query := `UPDATE files SET 
 			  departamento = $2, 

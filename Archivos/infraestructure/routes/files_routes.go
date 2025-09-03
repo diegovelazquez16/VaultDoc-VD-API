@@ -23,6 +23,7 @@ func SetupFilesRoutes(
 	grantViewPermissionController *controllers.GrantViewPermissionController,
 	removeViewPermissionController *controllers.RemoveViewPermissionController,
 	checkPermissionsController *controllers.CheckPermissionsController,
+	searchFileController *controllers.SearchFileController,
 ) {
 
     jwtSecret := os.Getenv("JWT_SECRET")
@@ -33,6 +34,7 @@ func SetupFilesRoutes(
 		filesGroup.POST("/", service.AuthMiddleware(jwtSecret), createFileController.Execute)
 		filesGroup.GET("/:id", service.AuthMiddleware(jwtSecret), getFileByIdController.Execute)
 		filesGroup.GET("/folder/:folderId", service.AuthMiddleware(jwtSecret), getFilesByFolderController.Execute)
+		filesGroup.GET("/search/:filename", service.AuthMiddleware(jwtSecret), searchFileController.Execute)
 		filesGroup.PUT("/:id/:id_user", service.AuthMiddleware(jwtSecret), updateFileController.Execute)
 		filesGroup.DELETE("/:id/:id_user", service.AuthMiddleware(jwtSecret), deleteFileController.Execute)
 		filesGroup.GET("/download/:id/:id_user", service.AuthMiddleware(jwtSecret), downloadFileController.Execute)
