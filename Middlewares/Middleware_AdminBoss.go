@@ -3,6 +3,7 @@ package service
 
 import (
 	"net/http"
+	"strings"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -17,10 +18,9 @@ func AdminBossMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		tokenString := authHeader
-		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-			tokenString = authHeader[7:]
-		} else {
+		// Usar el mismo método que AuthMiddleware
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == authHeader {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Bearer token not found"})
 			return
 		}
@@ -76,10 +76,18 @@ func AdminBossMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
+		// Convertir los claims a los tipos correctos antes de almacenarlos (igual que AuthMiddleware)
 		c.Set("userID", claims["userId"])
-		c.Set("roleID", roleID)
 		c.Set("email", claims["email"])
-		c.Set("department", claims["department"])
+		c.Set("roleID", claims["roleId"])
+		
+		// Asegurar que department se almacene como string
+		if dept, exists := claims["department"]; exists {
+			c.Set("department", dept)
+		} else {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Department not found in token"})
+			return
+		}
 
 		// Información adicional sobre el tipo de acceso
 		if roleID == 3 {

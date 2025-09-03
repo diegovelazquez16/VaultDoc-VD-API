@@ -1,8 +1,9 @@
-// Middlewares/Middleware_Admin.go
+// Middlewares/Middleware_Admi.go
 package service
 
 import (
 	"net/http"
+	"strings"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -11,39 +12,37 @@ import (
 
 func AdminMiddleware(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Primero ejecutar la validación del token (similar al AuthMiddleware)
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			return
 		}
-
-		tokenString := authHeader
-		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-			tokenString = authHeader[7:]
-		} else {
+		
+		// Usar el mismo método que AuthMiddleware
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == authHeader {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Bearer token not found"})
 			return
 		}
-
+		
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
 			return []byte(jwtSecret), nil
 		})
-
+		
 		if err != nil || !token.Valid {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
-
+		
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
 			return
 		}
-
+		
 		// Verificar que el rol sea admin (ID 3)
 		roleIDInterface, exists := claims["roleId"]
 		if !exists {
@@ -78,11 +77,18 @@ func AdminMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		// Guardar información del usuario en el contexto
+		// Convertir los claims a los tipos correctos antes de almacenarlos (igual que AuthMiddleware)
 		c.Set("userID", claims["userId"])
-		c.Set("roleID", roleID)
 		c.Set("email", claims["email"])
-		c.Set("department", claims["department"])
+		c.Set("roleID", roleID)
+
+		// Asegurar que department se almacene como string
+		if dept, exists := claims["department"]; exists {
+			c.Set("department", dept)
+		} else {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Department not found in token"})
+			return
+		}
 
 		c.Next()
 	}
