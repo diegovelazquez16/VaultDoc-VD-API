@@ -130,9 +130,9 @@ func (r *FilesPostgreSQLRepository) GetByName(name string) (entities.Files, erro
 func (r *FilesPostgreSQLRepository) SearchFile(name string) ([]entities.Files, error) {
 	var files []entities.Files
 	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio 
-			  FROM files WHERE nombre ILIKE %$1% ORDER BY id ASC`
-	
-	rows, err := r.db.DB.Query(query, name)
+			  FROM files WHERE nombre ILIKE $1 ORDER BY id ASC`
+	searchPattern := "%" + name + "%"
+	rows, err := r.db.DB.Query(query, searchPattern)
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener archivos: %v", err)
 	}
