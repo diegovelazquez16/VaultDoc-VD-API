@@ -24,6 +24,8 @@ func SetupFilesRoutes(
 	removeViewPermissionController *controllers.RemoveViewPermissionController,
 	checkPermissionsController *controllers.CheckPermissionsController,
 	searchFileController *controllers.SearchFileController,
+	getUsersViewPermissionsControlleer *controllers.GetUsersViewPermissionsController,
+	getUsersChangePermissionsController *controllers.GetUsersChangePermissionsController,
 ) {
 
     jwtSecret := os.Getenv("JWT_SECRET")
@@ -40,6 +42,9 @@ func SetupFilesRoutes(
 		filesGroup.GET("/download/:id/:id_user", service.AuthMiddleware(jwtSecret), downloadFileController.Execute)
         
 		// solo el jefe de departamento:
+		// Ver quiénes tienen permisos
+		filesGroup.GET("/permissions/view/g/:file_id", service.BossMiddleware(jwtSecret), getUsersViewPermissionsControlleer.Execute)
+		filesGroup.GET("/permissions/change/g/:file_id", service.AdminBossMiddleware(jwtSecret), getUsersChangePermissionsController.Execute)
 		// Permisos de edición
 		filesGroup.POST("/permissions/change/:id_user", service.BossMiddleware(jwtSecret), grantChangePermissionController.Execute)
 		filesGroup.DELETE("/permissions/change", service.BossMiddleware(jwtSecret), removeChangePermissionController.Execute)

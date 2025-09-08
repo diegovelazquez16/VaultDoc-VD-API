@@ -4,6 +4,7 @@ package repository
 import (
 	"fmt"
 	entities "VaultDoc-VD/Archivos/domain/entities"
+	userEntities "VaultDoc-VD/Usuarios/domain/entities"
 	"VaultDoc-VD/core"
 )
 
@@ -83,4 +84,46 @@ func (r *ChangeFilePostgreSQLRepository) HasPermission(fileId, userId int) (bool
 		return false, fmt.Errorf("error al verificar permiso de edición: %v", err)
 	}
 	return exists, nil
+}
+
+func (r *ChangeFilePostgreSQLRepository) GetUsersWithChangePermission(fileId int) ([]userEntities.User, error) {
+	var users []userEntities.User
+	rows, err := r.db.DB.Query("SELECT usuarios.id, usuarios.nombre, usuarios.apellidos FROM usuarios INNER JOIN change_files ON usuarios.id = change_files.id_user INNER JOIN files ON files.id = change_files.id_file WHERE change_files.id_file = $1 AND usuarios.departamento = files.departamento", fileId)
+
+	if err != nil {
+		return nil, fmt.Errorf("error al obtener ids de usuarios con permiso: %v", err)
+	}
+	defer rows.Close()
+	
+	for rows.Next() {
+		var user userEntities.User
+		err := rows.Scan(&user.Id, &user.Nombre, &user.Apellidos)
+		if err != nil {
+			return nil, fmt.Errorf("error al escanear id de usuario: %v", err)
+		}
+		users = append(users, user)
+	}
+
+	return users, err
+}
+
+func (r *ChangeFilePostgreSQLRepository) GetUsersWithoutChangePermission(fileId int) ([]userEntities.User, error) {
+	var users []userEntities.User
+	rows, err := r.db.DB.Query("SELECT usuarios.id, usuarios.nombre, usuarios.apellidos FROM usuarios INNER JOIN change_files ON usuarios.id = change_files.id_user INNER JOIN files ON files.id = change_files.id_file WHERE change_files.id_file != $1 AND usuarios.departamento = files.departamento", fileId)
+
+	if err != nil {
+		return nil, fmt.Errorf("error al obtener ids de usuarios sin permiso: %v", err)
+	}
+	defer rows.Close()
+	
+	for rows.Next() {
+		var user userEntities.User
+		err := rows.Scan(&user.Id, &user.Nombre, &user.Apellidos)
+		if err != nil {
+			return nil, fmt.Errorf("error al escanear id de usuario: %v", err)
+		}
+		users = append(users, user)
+	}
+
+	return users, err
 }
