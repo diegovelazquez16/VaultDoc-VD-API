@@ -2,9 +2,11 @@
 package controllers
 
 import (
-	"net/http"
 	"VaultDoc-VD/Archivos/application"
 	entities "VaultDoc-VD/Archivos/domain/entities"
+	"net/http"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,22 +19,41 @@ func NewRemoveChangePermissionController(useCase *application.RemoveChangePermis
 }
 
 func (c *RemoveChangePermissionController) Execute(ctx *gin.Context) {
-	var input struct {
-		Id_File int `json:"id_file" binding:"required"`
-		Id_User int `json:"id_user" binding:"required"`
+	idUser := ctx.Param("id_user")
+	if idUser == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "ID del usuario requerido",
+		})
+		return
+	}
+	id_user, err := strconv.Atoi(idUser)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "ID inválido",
+			"error":   "El ID debe ser un número entero válido",
+		})
+		return
 	}
 
-	if err := ctx.ShouldBindJSON(&input); err != nil {
+	idFile := ctx.Param("id_file")
+	if idFile == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "Entrada de datos no válida",
-			"error":   err.Error(),
+			"message": "ID del archivo requerido",
+		})
+		return
+	}
+	id_file, err := strconv.Atoi(idUser)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "ID inválido",
+			"error":   "El ID debe ser un número entero válido",
 		})
 		return
 	}
 
 	changeFile := entities.ChangeFile{
-		Id_File: input.Id_File,
-		Id_User: input.Id_User,
+		Id_File: id_file,
+		Id_User: id_user,
 	}
 
 	if err := c.useCase.Execute(changeFile); err != nil {
