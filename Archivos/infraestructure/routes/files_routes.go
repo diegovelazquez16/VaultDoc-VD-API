@@ -53,7 +53,7 @@ func SetupFilesRoutes(
 		filesGroup.POST("/permissions/view/:id_user", service.BossMiddleware(jwtSecret), grantViewPermissionController.Execute)
 		filesGroup.DELETE("/permissions/view/:id_user/:id_file", service.BossMiddleware(jwtSecret), removeViewPermissionController.Execute)
 		// Verificar permisos
-		filesGroup.GET("/permissions/:fileId/:userId", service.BossMiddleware(jwtSecret), checkPermissionsController.Execute)
+		filesGroup.GET("/permissions/:fileId/:userId", service.AuthMiddleware(jwtSecret), checkPermissionsController.Execute)
 		filesGroup.GET("/permissions/change/:id_folder/:id_user", service.AuthMiddleware(jwtSecret), getChangePermissionsOfAFolder.Execute)
 
 		filesGroup.GET("/", service.AdminMiddleware(jwtSecret), getAllFilesController.Execute)
