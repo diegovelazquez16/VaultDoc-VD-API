@@ -12,4 +12,5 @@ type ChangeFileRepository interface {
 	HasPermission(fileId, userId int) (bool, error)
 	GetUsersWithChangePermission(fileId int) ([]userEntities.User, error)
 	GetUsersWithoutChangePermission(fileId int) ([]userEntities.User, error)
+	GetChangePermissionsOfAFolder(folderId int, userId int) ([]int, error)
 }

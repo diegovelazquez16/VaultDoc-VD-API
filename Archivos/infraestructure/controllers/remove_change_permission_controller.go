@@ -42,7 +42,7 @@ func (c *RemoveChangePermissionController) Execute(ctx *gin.Context) {
 		})
 		return
 	}
-	id_file, err := strconv.Atoi(idUser)
+	id_file, err := strconv.Atoi(idFile)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"message": "ID inválido",

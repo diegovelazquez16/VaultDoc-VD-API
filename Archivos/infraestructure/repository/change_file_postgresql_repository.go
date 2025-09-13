@@ -109,7 +109,16 @@ func (r *ChangeFilePostgreSQLRepository) GetUsersWithChangePermission(fileId int
 
 func (r *ChangeFilePostgreSQLRepository) GetUsersWithoutChangePermission(fileId int) ([]userEntities.User, error) {
 	var users []userEntities.User
-	rows, err := r.db.DB.Query("SELECT usuarios.id, usuarios.nombre, usuarios.apellidos FROM usuarios INNER JOIN change_files ON usuarios.id = change_files.id_user INNER JOIN files ON files.id = change_files.id_file WHERE change_files.id_file != $1 AND usuarios.departamento = files.departamento", fileId)
+	rows, err := r.db.DB.Query(`SELECT u.id, u.nombre, u.apellidos
+		FROM usuarios u
+		JOIN files f ON u.departamento = f.departamento
+		WHERE f.id = 1 AND u.id_rol = $1
+  		AND NOT EXISTS (
+		    SELECT 1
+		    FROM change_files cf
+		    WHERE cf.id_user = u.id
+		      AND cf.id_file = f.id
+  	);`, fileId)
 
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener ids de usuarios sin permiso: %v", err)
@@ -126,4 +135,31 @@ func (r *ChangeFilePostgreSQLRepository) GetUsersWithoutChangePermission(fileId 
 	}
 
 	return users, err
+}
+
+func (r *ChangeFilePostgreSQLRepository) GetChangePermissionsOfAFolder(folderId, userId int) ([]int, error) {
+	var idFiles []int;
+	rows, err := r.db.DB.Query(`SELECT change_files.id_file
+		FROM change_files
+		INNER JOIN files ON files.id = change_files.id_file
+		INNER JOIN folders ON folders.id = files.id_folder
+		WHERE folders.id = $1 AND change_files.id_user = $2;`,
+		folderId, userId,	
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("error al obtener ids de archivo con permiso: %v", err)
+	}
+	defer rows.Close()
+	
+	for rows.Next() {
+		var id int
+		err := rows.Scan(&id)
+		if err != nil {
+			return nil, fmt.Errorf("error al escanear id de usuario: %v", err)
+		}
+		idFiles = append(idFiles, id)
+	}
+
+	return idFiles, err
 }
