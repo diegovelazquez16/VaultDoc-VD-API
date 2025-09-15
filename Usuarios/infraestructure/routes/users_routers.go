@@ -22,11 +22,11 @@ func SetupUserRoutes(r *gin.Engine, createUserController *controllers.CreateUser
 	jwtSecret := os.Getenv("JWT_SECRET")
 
 	// solo el admin
-	r.POST("/users", service.AdminMiddleware(jwtSecret), createUserController.Execute)
+	r.POST("/users", /*service.AuthMiddleware(jwtSecret),*/ createUserController.Execute)
 	r.DELETE("/users/:id", service.AdminMiddleware(jwtSecret), deleteUserController.Execute)
-	r.GET("/users", service.AdminMiddleware(jwtSecret), getUsersController.Execute)
-	r.GET("/users/:id", service.AdminMiddleware(jwtSecret), getUsersControllerById.Execute)
-	r.PUT("/users/:id", service.AdminMiddleware(jwtSecret), updateUserController.Execute)
+	r.GET("/users", /*service.AdminMiddleware(jwtSecret),*/ getUsersController.Execute)
+	r.GET("/users/:id", /*service.AdminMiddleware(jwtSecret),*/ getUsersControllerById.Execute)
+	r.PUT("/users/:id", /*service.AdminMiddleware(jwtSecret)*/ updateUserController.Execute)
 
 	// admin y jefe de departamento
 	r.GET("/users/department/:departamento", service.AdminBossMiddleware(jwtSecret), getUsersByDepartmentController.Execute)

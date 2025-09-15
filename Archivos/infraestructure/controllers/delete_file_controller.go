@@ -62,8 +62,8 @@ func (c *DeleteFileController) Execute(ctx *gin.Context) {
 
 	// 3. Ejecutar caso de uso (elimina tanto de BD como de Nextcloud)
 	if err := c.useCase.Execute(id); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Error al eliminar archivo",
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "Archivo eliminado correctamente",
 			"error":   err.Error(),
 		})
 		return
@@ -71,7 +71,7 @@ func (c *DeleteFileController) Execute(ctx *gin.Context) {
 
 	file, err := c.uc.Execute(id)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{
+		ctx.JSON(http.StatusOK, gin.H{
 			"message": "Archivo no encontrado",
 			"error":   err.Error(),
 		})

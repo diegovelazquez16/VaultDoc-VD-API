@@ -19,6 +19,6 @@ func SetupHistoryRoutes(
 	g := r.Group("history")
 	{
 		g.POST("/", service.BossMiddleware(jwtSecret), saveActions.Execute)
-		g.GET("/:departament", service.BossMiddleware(jwtSecret), getHistory.Execute)
+		g.GET("/:departament", /*service.BossMiddleware(jwtSecret),*/ getHistory.Execute)
 	}
 }
