@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"VaultDoc-VD/Archivos/application"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -49,10 +50,11 @@ func(c *GetUsersChangePermissionsController)Execute(ctx *gin.Context){
 		})
 		return
 	}
-
+fmt.Println(users_whitp, users_whitoutp)
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Usuarios con y sin permisos de edición obtenidos",
 		"users_p": users_whitp,
 		"users_wp": users_whitoutp,
+
 	})
 }

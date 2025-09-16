@@ -88,7 +88,7 @@ func (r *ChangeFilePostgreSQLRepository) HasPermission(fileId, userId int) (bool
 
 func (r *ChangeFilePostgreSQLRepository) GetUsersWithChangePermission(fileId int) ([]userEntities.User, error) {
 	var users []userEntities.User
-	rows, err := r.db.DB.Query("SELECT usuarios.id, usuarios.nombre, usuarios.apellidos FROM usuarios INNER JOIN change_files ON usuarios.id = change_files.id_user INNER JOIN files ON files.id = change_files.id_file WHERE change_files.id_file = $1 AND usuarios.departamento = files.departamento", fileId)
+	rows, err := r.db.DB.Query("SELECT usuarios.id, usuarios.nombre, usuarios.apellidos FROM usuarios INNER JOIN change_files ON usuarios.id = change_files.id_user INNER JOIN files ON files.id = change_files.id_file WHERE change_files.id_file = $1 AND usuarios.departamento = files.departamento AND usuarios.id_rol = 1", fileId)
 
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener ids de usuarios con permiso: %v", err)
@@ -110,15 +110,12 @@ func (r *ChangeFilePostgreSQLRepository) GetUsersWithChangePermission(fileId int
 func (r *ChangeFilePostgreSQLRepository) GetUsersWithoutChangePermission(fileId int) ([]userEntities.User, error) {
 	var users []userEntities.User
 	rows, err := r.db.DB.Query(`SELECT u.id, u.nombre, u.apellidos
-		FROM usuarios u
-		JOIN files f ON u.departamento = f.departamento
-		WHERE f.id = 1 AND u.id_rol = $1
-  		AND NOT EXISTS (
-		    SELECT 1
-		    FROM change_files cf
-		    WHERE cf.id_user = u.id
-		      AND cf.id_file = f.id
-  	);`, fileId)
+        FROM usuarios u
+        JOIN files f ON u.departamento = f.departamento
+        LEFT JOIN change_files cf ON cf.id_user = u.id AND cf.id_file = f.id
+        WHERE f.id = $1
+          AND u.id_rol = 1
+          AND cf.id_user IS NULL;`, fileId)
 
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener ids de usuarios sin permiso: %v", err)
