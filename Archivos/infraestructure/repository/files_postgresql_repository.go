@@ -301,7 +301,7 @@ func (r *FilesPostgreSQLRepository) GetByDirectorio(directorio string) ([]entiti
 
 func (r *FilesPostgreSQLRepository) GetByFolder(folderId int) ([]entities.Files, error) {
 	var files []entities.Files
-	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio 
+	query := `SELECT id, departamento, nombre, tamano, fecha, folio, extension, id_folder, id_uploader, directorio,  created_at, updated_at
 			  FROM files WHERE id_folder = $1 ORDER BY id ASC`
 	
 	rows, err := r.db.DB.Query(query, folderId)
@@ -323,6 +323,9 @@ func (r *FilesPostgreSQLRepository) GetByFolder(folderId int) ([]entities.Files,
 			&file.Id_Folder,
 			&file.Id_Uploader,
 			&file.Directorio,
+			&file.CreatedAt,  
+            &file.UpdatedAt,
+			
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error al escanear archivo: %v", err)
