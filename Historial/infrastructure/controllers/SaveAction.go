@@ -61,15 +61,15 @@ func(c *SaveActionController)Execute(ctx *gin.Context){
 
 func (c *SaveActionController) validateRecordInput(record entities.ReceiveHistory) error {
 	if strings.TrimSpace(record.Movimiento) == "" {
-		return fmt.Errorf("El movimiento realizado es requerido")
+		return fmt.Errorf("el movimiento realizado es requerido")
 	}
 
 	if strings.TrimSpace(record.Departamento) == "" || !validators.IsValidDepartamento(record.Departamento) {
-		return fmt.Errorf("El departamento es requerido")
+		return fmt.Errorf("el departamento es requerido")
 	}
 
 	if record.Id_file < 0 || record.Id_folder < 0 || record.Id_user < 0 {
-		return fmt.Errorf("Alguna de las Id recibidas son inválidas inválido")
+		return fmt.Errorf("alguna de las Id recibidas son inválidas inválido")
 	}
 
 	return nil

@@ -12,4 +12,6 @@ type Files struct {
 	Id_Folder    int    `json:"id_folder"`
 	Id_Uploader  int    `json:"id_uploader"`
 	Directorio   string `json:"directorio"`
+	CreatedAt	string	`json:"created_at"`
+	UpdatedAt 	string  `json:"updated_at"`
 }

@@ -21,14 +21,14 @@ func NewCreateUserController(useCase *application.CreateUserUseCase) *CreateUser
 }
 
 func (c *CreateUserController) Execute(ctx *gin.Context) {
-	// Verificar que el usuario autenticado sea admin (doble verificación)
+	/*// Verificar que el usuario autenticado sea admin (doble verificación)
 	roleID, exists := ctx.Get("roleID")
 	if !exists || roleID != 3 {
 		ctx.JSON(http.StatusForbidden, gin.H{
 			"error": "Acceso denegado. Solo los administradores pueden crear usuarios",
 		})
 		return
-	}
+	}*/
 
 	// Obtener información del admin que está creando el usuario
 	adminEmail, _ := ctx.Get("email")
