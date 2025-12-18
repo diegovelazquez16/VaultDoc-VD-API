@@ -1,10 +1,11 @@
-// Archivos/infraestructure/adapters/nextcloud_file_adapter.go
+// Archivos/infrastructure/adapters/nextcloud_file_adapter.go
 package adapters
 
 import (
 	"VaultDoc-VD/Archivos/domain/services"
 	"VaultDoc-VD/core"
 	"bytes"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -13,11 +14,13 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 type NextcloudFileAdapter struct {
-	client *core.NextcloudClient
+	client     *core.NextcloudClient
+	workerPool *WorkerPool
 }
 
 // Estructura para parsear respuesta XML de PROPFIND
@@ -27,22 +30,172 @@ type PropfindResponse struct {
 		Href     string `xml:"href"`
 		Propstat struct {
 			Prop struct {
-				DisplayName       string `xml:"displayname"`
-				ContentLength     string `xml:"getcontentlength"`
-				LastModified      string `xml:"getlastmodified"`
-				ContentType       string `xml:"getcontenttype"`
+				DisplayName   string `xml:"displayname"`
+				ContentLength string `xml:"getcontentlength"`
+				LastModified  string `xml:"getlastmodified"`
+				ContentType   string `xml:"getcontenttype"`
 			} `xml:"prop"`
 			Status string `xml:"status"`
 		} `xml:"propstat"`
 	} `xml:"response"`
 }
 
+// UploadJob representa un trabajo de upload
+type UploadJob struct {
+	FolderPath string
+	FileName   string
+	Content    []byte
+	ResultChan chan UploadResult
+}
+
+// UploadResult contiene el resultado de un upload
+type UploadResult struct {
+	Path  string
+	Error error
+}
+
+// WorkerPool maneja un pool de workers para uploads concurrentes
+type WorkerPool struct {
+	jobs       chan UploadJob
+	wg         sync.WaitGroup
+	ctx        context.Context
+	cancel     context.CancelFunc
+	client     *core.NextcloudClient
+	maxRetries int
+}
+
+// NewWorkerPool crea un nuevo pool de workers
+func NewWorkerPool(client *core.NextcloudClient, maxWorkers int) *WorkerPool {
+	ctx, cancel := context.WithCancel(context.Background())
+	
+	pool := &WorkerPool{
+		jobs:       make(chan UploadJob, maxWorkers*2), // Buffer para evitar bloqueos
+		ctx:        ctx,
+		cancel:     cancel,
+		client:     client,
+		maxRetries: client.MaxRetries,
+	}
+
+	// Iniciar workers
+	for i := 0; i < maxWorkers; i++ {
+		pool.wg.Add(1)
+		go pool.worker(i)
+	}
+
+	return pool
+}
+
+// worker procesa los trabajos de upload
+func (wp *WorkerPool) worker(id int) {
+	defer wp.wg.Done()
+
+	for {
+		select {
+		case <-wp.ctx.Done():
+			return
+		case job, ok := <-wp.jobs:
+			if !ok {
+				return
+			}
+			
+			// Procesar el upload con reintentos
+			result := wp.processUpload(job)
+			job.ResultChan <- result
+		}
+	}
+}
+
+// processUpload ejecuta el upload con reintentos
+func (wp *WorkerPool) processUpload(job UploadJob) UploadResult {
+	var lastErr error
+	
+	for attempt := 0; attempt <= wp.maxRetries; attempt++ {
+		if attempt > 0 {
+			// Backoff exponencial entre reintentos
+			backoff := time.Duration(attempt) * time.Second
+			time.Sleep(backoff)
+		}
+
+		path, err := wp.executeUpload(job.FolderPath, job.FileName, job.Content)
+		if err == nil {
+			return UploadResult{Path: path, Error: nil}
+		}
+
+		lastErr = err
+		
+		// Si es un error de cliente (4xx), no reintentar
+		if strings.Contains(err.Error(), "status: 4") {
+			break
+		}
+	}
+
+	return UploadResult{
+		Path:  "",
+		Error: fmt.Errorf("upload falló después de %d intentos: %w", wp.maxRetries+1, lastErr),
+	}
+}
+
+// executeUpload realiza el upload a Nextcloud
+func (wp *WorkerPool) executeUpload(folderPath, fileName string, content []byte) (string, error) {
+	// Construir URL
+	cleanFolderPath := strings.Trim(folderPath, "/")
+	var fileURL string
+	if cleanFolderPath == "" {
+		fileURL = fmt.Sprintf("%s/remote.php/dav/files/%s/%s",
+			wp.client.BaseURL, wp.client.Username, fileName)
+	} else {
+		fileURL = fmt.Sprintf("%s/remote.php/dav/files/%s/%s/%s",
+			wp.client.BaseURL, wp.client.Username, cleanFolderPath, fileName)
+	}
+
+	// Crear contexto con timeout
+	ctx, cancel := context.WithTimeout(wp.ctx, wp.client.RequestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "PUT", fileURL, bytes.NewReader(content))
+	if err != nil {
+		return "", fmt.Errorf("error al crear request: %w", err)
+	}
+
+	req.SetBasicAuth(wp.client.Username, wp.client.Password)
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Content-Length", strconv.Itoa(len(content)))
+
+	resp, err := wp.client.Client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("error al subir archivo: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("error al subir archivo a Nextcloud (status: %d): %s", resp.StatusCode, string(body))
+	}
+
+	return path.Join(cleanFolderPath, fileName), nil
+}
+
+// Submit envía un trabajo al pool
+func (wp *WorkerPool) Submit(job UploadJob) {
+	wp.jobs <- job
+}
+
+// Shutdown cierra el pool de workers
+func (wp *WorkerPool) Shutdown() {
+	close(wp.jobs)
+	wp.wg.Wait()
+	wp.cancel()
+}
+
 // Verificar que implementa la interfaz
 var _ services.FileStorageService = (*NextcloudFileAdapter)(nil)
 
 func NewNextcloudFileAdapter() *NextcloudFileAdapter {
+	client := core.NewNextcloudClient()
+	
 	return &NextcloudFileAdapter{
-		client: core.NewNextcloudClient(),
+		client:     client,
+		workerPool: NewWorkerPool(client, client.MaxWorkers),
 	}
 }
 
@@ -57,6 +210,7 @@ func (nf *NextcloudFileAdapter) buildFileURL(folderPath, fileName string) string
 		nf.client.BaseURL, nf.client.Username, cleanFolderPath, fileName)
 }
 
+// UploadFile ahora usa el worker pool
 func (nf *NextcloudFileAdapter) UploadFile(folderPath string, fileName string, fileHeader *multipart.FileHeader) (string, error) {
 	// Validar parámetros de entrada
 	if fileName == "" {
@@ -79,34 +233,49 @@ func (nf *NextcloudFileAdapter) UploadFile(folderPath string, fileName string, f
 		return "", fmt.Errorf("error al leer archivo: %w", err)
 	}
 
-	// Construir la URL de destino
-	fileURL := nf.buildFileURL(folderPath, fileName)
-
-	// Crear request PUT para subir el archivo
-	req, err := http.NewRequest("PUT", fileURL, bytes.NewReader(fileContent))
-	if err != nil {
-		return "", fmt.Errorf("error al crear request: %w", err)
-	}
-
-	req.SetBasicAuth(nf.client.Username, nf.client.Password)
-	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("Content-Length", strconv.FormatInt(fileHeader.Size, 10))
-
-	resp, err := nf.client.Client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("error al subir archivo: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("error al subir archivo a Nextcloud (status: %d): %s", resp.StatusCode, string(body))
-	}
-
-	cleanFolderPath := strings.Trim(folderPath, "/")
-	return path.Join(cleanFolderPath, fileName), nil
+	// Usar UploadFileFromBytes que ya implementa el worker pool
+	return nf.UploadFileFromBytes(folderPath, fileName, fileContent)
 }
 
+// UploadFileFromBytes ahora usa el worker pool
+func (nf *NextcloudFileAdapter) UploadFileFromBytes(folderPath string, fileName string, fileContent []byte) (string, error) {
+	// Validar parámetros de entrada
+	if fileName == "" {
+		return "", fmt.Errorf("nombre de archivo no puede estar vacío")
+	}
+	if fileContent == nil {
+		return "", fmt.Errorf("contenido del archivo no puede ser nil")
+	}
+
+	// Crear canal para resultado
+	resultChan := make(chan UploadResult, 1)
+
+	// Crear job y enviarlo al pool
+	job := UploadJob{
+		FolderPath: folderPath,
+		FileName:   fileName,
+		Content:    fileContent,
+		ResultChan: resultChan,
+	}
+
+	nf.workerPool.Submit(job)
+
+	// Esperar resultado con timeout
+	ctx, cancel := context.WithTimeout(context.Background(), nf.client.RequestTimeout+5*time.Second)
+	defer cancel()
+
+	select {
+	case result := <-resultChan:
+		if result.Error != nil {
+			return "", result.Error
+		}
+		return result.Path, nil
+	case <-ctx.Done():
+		return "", fmt.Errorf("timeout esperando resultado del upload")
+	}
+}
+
+// DownloadFile - Sin cambios, ya que los downloads individuales son rápidos
 func (nf *NextcloudFileAdapter) DownloadFile(folderPath string, fileName string) ([]byte, error) {
 	// Validar parámetros de entrada
 	if fileName == "" {
@@ -116,7 +285,11 @@ func (nf *NextcloudFileAdapter) DownloadFile(folderPath string, fileName string)
 	// Construir la URL del archivo
 	fileURL := nf.buildFileURL(folderPath, fileName)
 
-	req, err := http.NewRequest("GET", fileURL, nil)
+	// Crear contexto con timeout
+	ctx, cancel := context.WithTimeout(context.Background(), nf.client.RequestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", fileURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error al crear request: %w", err)
 	}
@@ -146,6 +319,7 @@ func (nf *NextcloudFileAdapter) DownloadFile(folderPath string, fileName string)
 	return content, nil
 }
 
+// DeleteFile - Agregado contexto con timeout
 func (nf *NextcloudFileAdapter) DeleteFile(folderPath string, fileName string) error {
 	// Validar parámetros de entrada
 	if fileName == "" {
@@ -155,7 +329,11 @@ func (nf *NextcloudFileAdapter) DeleteFile(folderPath string, fileName string) e
 	// Construir la URL del archivo
 	fileURL := nf.buildFileURL(folderPath, fileName)
 
-	req, err := http.NewRequest("DELETE", fileURL, nil)
+	// Crear contexto con timeout
+	ctx, cancel := context.WithTimeout(context.Background(), nf.client.RequestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "DELETE", fileURL, nil)
 	if err != nil {
 		return fmt.Errorf("error al crear request: %w", err)
 	}
@@ -177,6 +355,7 @@ func (nf *NextcloudFileAdapter) DeleteFile(folderPath string, fileName string) e
 	return nil
 }
 
+// FileExists - Agregado contexto con timeout
 func (nf *NextcloudFileAdapter) FileExists(folderPath string, fileName string) (bool, error) {
 	// Validar parámetros de entrada
 	if fileName == "" {
@@ -186,7 +365,11 @@ func (nf *NextcloudFileAdapter) FileExists(folderPath string, fileName string) (
 	// Construir la URL del archivo
 	fileURL := nf.buildFileURL(folderPath, fileName)
 
-	req, err := http.NewRequest("HEAD", fileURL, nil)
+	// Crear contexto con timeout
+	ctx, cancel := context.WithTimeout(context.Background(), nf.client.RequestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "HEAD", fileURL, nil)
 	if err != nil {
 		return false, fmt.Errorf("error al crear request: %w", err)
 	}
@@ -210,6 +393,7 @@ func (nf *NextcloudFileAdapter) FileExists(folderPath string, fileName string) (
 	return true, nil
 }
 
+// GetFileInfo - Agregado contexto con timeout
 func (nf *NextcloudFileAdapter) GetFileInfo(folderPath string, fileName string) (*services.FileInfo, error) {
 	// Validar parámetros de entrada
 	if fileName == "" {
@@ -230,7 +414,11 @@ func (nf *NextcloudFileAdapter) GetFileInfo(folderPath string, fileName string) 
 	</d:prop>
 </d:propfind>`
 
-	req, err := http.NewRequest("PROPFIND", fileURL, strings.NewReader(propfindXML))
+	// Crear contexto con timeout
+	ctx, cancel := context.WithTimeout(context.Background(), nf.client.RequestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "PROPFIND", fileURL, strings.NewReader(propfindXML))
 	if err != nil {
 		return nil, fmt.Errorf("error al crear request: %w", err)
 	}
@@ -269,7 +457,7 @@ func (nf *NextcloudFileAdapter) GetFileInfo(folderPath string, fileName string) 
 
 func (nf *NextcloudFileAdapter) parseFileInfoResponse(xmlData []byte, fileName string) (*services.FileInfo, error) {
 	var propfindResp PropfindResponse
-	
+
 	err := xml.Unmarshal(xmlData, &propfindResp)
 	if err != nil {
 		return nil, fmt.Errorf("error al parsear XML: %w", err)
@@ -308,39 +496,9 @@ func (nf *NextcloudFileAdapter) parseFileInfoResponse(xmlData []byte, fileName s
 	return fileInfo, nil
 }
 
-func (nf *NextcloudFileAdapter) UploadFileFromBytes(folderPath string, fileName string, fileContent []byte) (string, error) {
-	// Validar parámetros de entrada
-	if fileName == "" {
-		return "", fmt.Errorf("nombre de archivo no puede estar vacío")
+// Cleanup cierra el worker pool (llamar al cerrar la aplicación)
+func (nf *NextcloudFileAdapter) Cleanup() {
+	if nf.workerPool != nil {
+		nf.workerPool.Shutdown()
 	}
-	if fileContent == nil {
-		return "", fmt.Errorf("contenido del archivo no puede ser nil")
-	}
-
-	// Construir la URL de destino
-	fileURL := nf.buildFileURL(folderPath, fileName)
-
-	// Crear request PUT para subir el archivo
-	req, err := http.NewRequest("PUT", fileURL, bytes.NewReader(fileContent))
-	if err != nil {
-		return "", fmt.Errorf("error al crear request: %w", err)
-	}
-
-	req.SetBasicAuth(nf.client.Username, nf.client.Password)
-	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("Content-Length", strconv.Itoa(len(fileContent)))
-
-	resp, err := nf.client.Client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("error al subir archivo: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("error al subir archivo a Nextcloud (status: %d): %s", resp.StatusCode, string(body))
-	}
-
-	cleanFolderPath := strings.Trim(folderPath, "/")
-	return path.Join(cleanFolderPath, fileName), nil
 }
