@@ -21,14 +21,30 @@ func NewCreateUserController(useCase *application.CreateUserUseCase) *CreateUser
 }
 
 func (c *CreateUserController) Execute(ctx *gin.Context) {
-	/*// Verificar que el usuario autenticado sea admin (doble verificación)
 	roleID, exists := ctx.Get("roleID")
-	if !exists || roleID != 3 {
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"error": "No autenticado. Se requiere token de autorización",
+		})
+		return
+	}
+
+	// Convertir roleID a int de forma segura
+	roleIDInt, ok := roleID.(float64) // JWT devuelve float64
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Error al procesar el rol del usuario",
+		})
+		return
+	}
+
+	// Verificar que sea admin
+	if int(roleIDInt) != 3 {
 		ctx.JSON(http.StatusForbidden, gin.H{
 			"error": "Acceso denegado. Solo los administradores pueden crear usuarios",
 		})
 		return
-	}*/
+	}
 
 	// Obtener información del admin que está creando el usuario
 	adminEmail, _ := ctx.Get("email")
@@ -42,7 +58,7 @@ func (c *CreateUserController) Execute(ctx *gin.Context) {
 		return
 	}
 
-	// Validaciones básicas
+
 	if err := c.validateUserInput(user); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Datos de usuario inválidos",
@@ -51,9 +67,9 @@ func (c *CreateUserController) Execute(ctx *gin.Context) {
 		return
 	}
 
-	// Si no se especifica rol, asignar rol de usuario regular (por ejemplo, ID 2)
+	// IMPORTANTE: Solo asignar rol por defecto si NO se especificó en el request
 	if user.Id_Rol == 0 {
-		user.Id_Rol = 2 // O el ID que corresponda a "usuario regular"
+		user.Id_Rol = 1 
 	}
 
 	// Ejecutar caso de uso
@@ -124,12 +140,11 @@ func (c *CreateUserController) validateUserInput(user entities.User) error {
 		return fmt.Errorf("el departamento debe ser uno de los ya existentes")
 	}
 
-	// Validar que el rol sea válido
+	// Validar que el rol sea válido si fue especificado
 	if user.Id_Rol != 0 {
-		if user.Id_Rol < 1 {
-			return fmt.Errorf("el id_rol debe ser un número positivo")
+		if user.Id_Rol < 1 || user.Id_Rol > 3 {
+			return fmt.Errorf("el id_rol debe estar entre 1 y 3")
 		}
-		// Opcional: restringir la creación de otros admins
 		if user.Id_Rol == 3 {
 			return fmt.Errorf("no se puede asignar rol de administrador directamente")
 		}
