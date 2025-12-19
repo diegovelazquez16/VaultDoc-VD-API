@@ -99,7 +99,7 @@ func (c *GetProfileController) getRoleName(roleID int) string {
 	case 1:
 		return "usuario"
 	case 2:
-		return "empleado"
+		return "jefe"
 	case 3:
 		return "admin"
 	case 4:
