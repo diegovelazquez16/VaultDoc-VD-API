@@ -1,4 +1,4 @@
-// Archivos/infrastructure/controllers/delete_file_controller.go (Actualizado)
+// Archivos/infrastructure/controllers/delete_file_controller.go
 package controllers
 
 import (
@@ -12,16 +12,20 @@ import (
 )
 
 type DeleteFileController struct {
-	useCase *application.DeleteFileUseCase
+	useCase        *application.DeleteFileUseCase
 	historyUseCase *history.SaveActionUseCase
-	uc * application.GetFileByIdUseCase
+	uc             *application.GetFileByIdUseCase
 }
 
 func NewDeleteFileController(
-	useCase *application.DeleteFileUseCase, 
+	useCase *application.DeleteFileUseCase,
 	historyUseCase *history.SaveActionUseCase,
 	uc *application.GetFileByIdUseCase) *DeleteFileController {
-	return &DeleteFileController{useCase: useCase, historyUseCase: historyUseCase, uc: uc}
+	return &DeleteFileController{
+		useCase:        useCase,
+		historyUseCase: historyUseCase,
+		uc:             uc,
+	}
 }
 
 func (c *DeleteFileController) Execute(ctx *gin.Context) {
@@ -42,7 +46,7 @@ func (c *DeleteFileController) Execute(ctx *gin.Context) {
 		return
 	}
 
-	// 2. Convertir ID a entero
+	// 2. Convertir IDs a entero
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -51,33 +55,27 @@ func (c *DeleteFileController) Execute(ctx *gin.Context) {
 		})
 		return
 	}
+
 	id_user, err := strconv.Atoi(idUser)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "ID inválido",
+			"message": "ID del usuario inválido",
 			"error":   "El ID debe ser un número entero válido",
 		})
 		return
 	}
 
-	// 3. Ejecutar caso de uso (elimina tanto de BD como de Nextcloud)
-	if err := c.useCase.Execute(id); err != nil {
-		ctx.JSON(http.StatusOK, gin.H{
-			"message": "Archivo eliminado correctamente",
-			"error":   err.Error(),
-		})
-		return
-	}
-
+	// 3. IMPORTANTE: Obtener información del archivo ANTES de eliminarlo
 	file, err := c.uc.Execute(id)
 	if err != nil {
-		ctx.JSON(http.StatusOK, gin.H{
+		ctx.JSON(http.StatusNotFound, gin.H{
 			"message": "Archivo no encontrado",
 			"error":   err.Error(),
 		})
 		return
 	}
 
+	// 4. Registrar la acción en el historial ANTES de eliminar
 	var record entities.ReceiveHistory
 	record.Departamento = file.Departamento
 	record.Id_user = id_user
@@ -94,10 +92,20 @@ func (c *DeleteFileController) Execute(ctx *gin.Context) {
 		return
 	}
 
-	// 4. Respuesta exitosa
+	// 5. Ahora sí eliminar el archivo (tanto de BD como de Nextcloud)
+	if err := c.useCase.Execute(id); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Error al eliminar el archivo",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 6. Respuesta exitosa
 	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Archivo eliminado exitosamente de BD y Nextcloud",
-		"id":      id,
+		"message":    "Archivo eliminado exitosamente de BD y Nextcloud",
+		"id":         id,
+		"file_name":  file.Nombre,
+		"registered": "Acción registrada en el historial",
 	})
 }
-

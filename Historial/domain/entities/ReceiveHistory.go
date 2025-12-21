@@ -1,3 +1,4 @@
+//VaultDoc-VD-API/Historial/domain/entities/ReceiveHistory.go
 package entities
 
 type ReceiveHistory struct {
