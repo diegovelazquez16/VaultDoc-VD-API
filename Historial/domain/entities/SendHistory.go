@@ -1,3 +1,4 @@
+// VaultDoc-VD-API/Historial/domain/entities/SendHistory.go
 package entities
 
 import (
