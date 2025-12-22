@@ -97,15 +97,15 @@ func (c *GetProfileController) Execute(ctx *gin.Context) {
 func (c *GetProfileController) getRoleName(roleID int) string {
 	switch roleID {
 	case 1:
-		return "usuario"
+		return "Empleado"
 	case 2:
-		return "jefe"
+		return "Jefe de departamento"
 	case 3:
-		return "admin"
-	case 4:
+		return "Administrador de sistema"
+	/*case 4:
 		return "jefe_departamento"
 	case 5:
-		return "supervisor"
+		return "supervisor"*/
 	default:
 		return "desconocido"
 	}
