@@ -54,25 +54,26 @@ func (r *HistoryPostgreSQLRepository) SaveAction(history entities.ReceiveHistory
 
 func (r *HistoryPostgreSQLRepository) GetHistory(departament string) ([]entities.SendHistory, error) {
 	var history []entities.SendHistory
+	
 	query := `SELECT 
 		history.id, 
 		history.movimiento, 
 		history.departamento, 
-		history.fecha_registro,
-		history.folder_name,
-		history.file_name,
-		history.user_name,
-		COALESCE(usuarios.nombre, '') as user_nombre,
-		COALESCE(usuarios.apellidos, '') as user_apellidos,
-		COALESCE(folders.name, '') as folder_name_actual,
-		COALESCE(files.nombre, '') as file_nombre_actual
+		history.fecha_registro, 
+		usuarios.nombre, 
+		usuarios.apellidos, 
+		COALESCE(folders.name, history.folder_name, '') as folder_name,
+		CASE 
+			WHEN history.id_file IS NULL THEN COALESCE(history.file_name, '')
+			ELSE COALESCE(files.nombre, history.file_name, '')
+		END as file_nombre
 		FROM history 
-		LEFT JOIN usuarios ON history.id_user = usuarios.id 
+		INNER JOIN usuarios ON history.id_user = usuarios.id 
 		LEFT JOIN folders ON history.id_folder = folders.id 
 		LEFT JOIN files ON history.id_file = files.id 
 		WHERE history.departamento = $1
 		ORDER BY history.fecha_registro DESC`
-
+	
 	rows, err := r.db.DB.Query(query, departament)
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener historial: %v", err)
@@ -81,52 +82,30 @@ func (r *HistoryPostgreSQLRepository) GetHistory(departament string) ([]entities
 
 	for rows.Next() {
 		var record entities.SendHistory
-		var folderNameBackup, fileNameBackup, userNameBackup sql.NullString
-		var userNombre, userApellidos, folderNameActual, fileNombreActual sql.NullString
+		var folderName, fileName sql.NullString
 		
 		err := rows.Scan(
 			&record.Id,
 			&record.Movimiento,
 			&record.Departamento,
 			&record.Fecha_registro,
-			&folderNameBackup,
-			&fileNameBackup,
-			&userNameBackup,
-			&userNombre,
-			&userApellidos,
-			&folderNameActual,
-			&fileNombreActual,
+			&record.Id_user.Nombre,
+			&record.Id_user.Apellidos,
+			&folderName,
+			&fileName,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error al escanear registro: %v", err)
 		}
 		
-		// Usar el nombre actual si existe, si no usar el backup
-		if userNombre.Valid {
-			record.Id_user.Nombre = userNombre.String
-			record.Id_user.Apellidos = userApellidos.String
-		} else if userNameBackup.Valid {
-			record.UserName = userNameBackup.String
-		}
-		
-		if folderNameActual.Valid {
-			record.Id_folder.Name = folderNameActual.String
-		} else if folderNameBackup.Valid {
-			record.FolderName = folderNameBackup.String
-		}
-		
-		if fileNombreActual.Valid {
-			record.Id_file.Nombre = fileNombreActual.String
-		} else if fileNameBackup.Valid {
-			record.FileName = fileNameBackup.String
-		}
+		record.Id_folder.Name = folderName.String
+		record.Id_file.Nombre = fileName.String
 		
 		history = append(history, record)
 	}
 
 	return history, nil
 }
-
 func (r *HistoryPostgreSQLRepository) GetAllHistory() ([]entities.SendHistory, error) {
 	var history []entities.SendHistory
 	query := `SELECT 
