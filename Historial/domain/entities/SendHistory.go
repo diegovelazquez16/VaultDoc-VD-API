@@ -8,11 +8,16 @@ import (
 )
 
 type SendHistory struct {
-	Id             int
-	Movimiento     string
-	Departamento   string
-	Id_folder      folderEntities.Folders
-	Id_file        fileEntities.Files
-	Id_user        userEntities.User
-	Fecha_registro string
+	Id             int                      `json:"id"`
+	Movimiento     string                   `json:"movimiento"`
+	Departamento   string                   `json:"departamento"`
+	Id_folder      folderEntities.Folders   `json:"folder"`
+	Id_file        fileEntities.Files       `json:"file"`
+	Id_user        userEntities.User        `json:"user"`
+	
+	FolderName     string                   `json:"folder_name_backup,omitempty"`
+	FileName       string                   `json:"file_name_backup,omitempty"`
+	UserName       string                   `json:"user_name_backup,omitempty"`
+	
+	Fecha_registro string                   `json:"fecha_registro"`
 }
